@@ -1,0 +1,8 @@
+# CDO grid description file
+            gridtype = lonlat
+            xsize = 1152
+            ysize = 768
+            xfirst = -180
+            xinc = 0.3125
+            yfirst = -90
+            yinc = 0.234375

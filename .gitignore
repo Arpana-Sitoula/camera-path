@@ -1,0 +1,13 @@
+# Ignore data folder
+Feature_Detection/Data/tc_ar_data/
+
+# Ignore results folder
+Feature_Detection/Results/
+
+# Ignore file types
+*.nc
+*.grib2
+*.bz2
+
+# Python cache
+__pycache__/

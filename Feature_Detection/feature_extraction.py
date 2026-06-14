@@ -108,7 +108,7 @@ def detect_features(time_step=0):
     plt.rcParams['savefig.dpi'] = 300
 
     model = CGNet()
-    model.load_state_dict(torch.load("./NeuralNetworks/TC_AR/model.pth"))
+    model.load_state_dict(torch.load("./NeuralNetworks/TC_AR/model.pth", map_location=torch.device('cpu')))
 
     file_name_list_raw = glob.glob("./Data/tc_ar_data/" + str(time_step) + "/*_lonlat.grib2")
     filename_list = [0, 0, 0, 0]
