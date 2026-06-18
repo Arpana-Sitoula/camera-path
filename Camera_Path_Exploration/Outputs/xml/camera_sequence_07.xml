@@ -1,0 +1,38 @@
+<!DOCTYPE CameraSequence>
+<CameraSequence frameTime="10" loop="0" name="AutoSequence_t7" runtime="10" tension="0">
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="-48.461538" lon="-179.687228" pitch="0" roll="0" transition="1" yaw="0" z="60"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="-54.328553" lon="-170.929626" pitch="0" roll="0" transition="1" yaw="0" z="60"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="-59.726206" lon="-168.740226" pitch="0" roll="0" transition="1" yaw="0" z="60"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="-12.790091" lon="-166.238054" pitch="0" roll="0" transition="1" yaw="0" z="60"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="24.054759" lon="-174.682884" pitch="0" roll="0" transition="1" yaw="0" z="60"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="37.666232" lon="-149.973936" pitch="0" roll="0" transition="1" yaw="0" z="60"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="54.328553" lon="-138.714162" pitch="0" roll="0" transition="1" yaw="0" z="60"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="7.157757" lon="-133.084275" pitch="0" roll="0" transition="1" yaw="0" z="30"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="-32.503259" lon="-122.137272" pitch="0" roll="0" transition="1" yaw="0" z="60"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="-54.563233" lon="-84.604692" pitch="0" roll="0" transition="1" yaw="0" z="60"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="-21.707953" lon="-40.191138" pitch="0" roll="0" transition="1" yaw="0" z="60"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="-42.125163" lon="-24.239791" pitch="0" roll="0" transition="1" yaw="0" z="60"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="-57.848761" lon="-9.852302" pitch="0" roll="0" transition="1" yaw="0" z="60"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="-29.687093" lon="31.120765" pitch="0" roll="0" transition="1" yaw="0" z="60"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="-32.033898" lon="64.274544" pitch="0" roll="0" transition="1" yaw="0" z="60"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="-53.389831" lon="87.419635" pitch="0" roll="0" transition="1" yaw="0" z="60"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="-32.972621" lon="117.132928" pitch="0" roll="0" transition="1" yaw="0" z="60"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="-29.217731" lon="128.392702" pitch="0" roll="0" transition="1" yaw="0" z="60"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="-40.247718" lon="127.767159" pitch="0" roll="0" transition="1" yaw="0" z="60"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="-48.930900" lon="139.965248" pitch="0" roll="0" transition="1" yaw="0" z="60"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="-35.084746" lon="156.229366" pitch="0" roll="0" transition="1" yaw="0" z="60"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="-53.624511" lon="179.687228" pitch="0" roll="0" transition="1" yaw="0" z="60"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="33.441982" lon="162.797567" pitch="0" roll="0" transition="1" yaw="0" z="60"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="32.737940" lon="156.542137" pitch="0" roll="0" transition="1" yaw="0" z="60"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="34.615385" lon="169.052997" pitch="0" roll="0" transition="1" yaw="0" z="60"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="25.228162" lon="128.392702" pitch="0" roll="0" transition="1" yaw="0" z="60"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="24.289439" lon="123.701129" pitch="0" roll="0" transition="1" yaw="0" z="60"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="22.646675" lon="119.322328" pitch="0" roll="0" transition="1" yaw="0" z="60"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="52.451108" lon="-25.490877" pitch="0" roll="0" transition="1" yaw="0" z="60"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="39.778357" lon="-42.380539" pitch="0" roll="0" transition="1" yaw="0" z="60"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="29.687093" lon="-39.878367" pitch="0" roll="0" transition="1" yaw="0" z="60"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="30.860495" lon="-31.433536" pitch="0" roll="0" transition="1" yaw="0" z="60"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="28.983051" lon="-48.635969" pitch="0" roll="0" transition="1" yaw="0" z="60"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="33.441982" lon="-73.344917" pitch="0" roll="0" transition="1" yaw="0" z="60"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="23.350717" lon="-95.238923" pitch="0" roll="0" transition="1" yaw="0" z="30"/>
+</CameraSequence>

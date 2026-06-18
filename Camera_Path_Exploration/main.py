@@ -1,5 +1,6 @@
 from extractor import extract_keyframes
 from visualizer import save_camera_map
+from exporter import export_to_xml
 import json, os
 
 
@@ -28,11 +29,16 @@ def main():
 
     # save all keyframes to JSON for later Met3D XML export
     out_path = f"{OUTPUT_DIR}/keyframes_2d.json"
+
     with open(out_path, "w") as f:
         json.dump(all_keyframes, f, indent=2)
 
     print(f"\nAll done. Keyframes saved to {out_path}")
 
+    export_to_xml(
+    keyframes_json_path=f"{OUTPUT_DIR}/keyframes_2d.json",
+    output_dir=f"{OUTPUT_DIR}/xml"
+)
 
 if __name__ == "__main__":
     main()
