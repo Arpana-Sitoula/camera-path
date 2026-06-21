@@ -1,35 +1,99 @@
 <!DOCTYPE CameraSequence>
 <CameraSequence frameTime="10" loop="0" name="AutoSequence_t4" runtime="10" tension="0">
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="-50.573664" lon="-177.497828" pitch="0" roll="0" transition="1" yaw="0" z="150"/>
   <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="-50.573664" lon="-177.497828" pitch="0" roll="0" transition="1" yaw="0" z="60"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="-50.573664" lon="-177.497828" pitch="0" roll="0" transition="1" yaw="0" z="150"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="-56.205997" lon="-172.493484" pitch="0" roll="0" transition="1" yaw="0" z="150"/>
   <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="-56.205997" lon="-172.493484" pitch="0" roll="0" transition="1" yaw="0" z="60"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="-56.205997" lon="-172.493484" pitch="0" roll="0" transition="1" yaw="0" z="150"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="-59.491525" lon="-173.431798" pitch="0" roll="0" transition="1" yaw="0" z="150"/>
   <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="-59.491525" lon="-173.431798" pitch="0" roll="0" transition="1" yaw="0" z="60"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="-59.491525" lon="-173.431798" pitch="0" roll="0" transition="1" yaw="0" z="150"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="-13.963494" lon="-164.361425" pitch="0" roll="0" transition="1" yaw="0" z="150"/>
   <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="-13.963494" lon="-164.361425" pitch="0" roll="0" transition="1" yaw="0" z="60"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="-13.963494" lon="-164.361425" pitch="0" roll="0" transition="1" yaw="0" z="150"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="7.392438" lon="-133.084275" pitch="0" roll="0" transition="1" yaw="0" z="150"/>
   <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="7.392438" lon="-133.084275" pitch="0" roll="0" transition="1" yaw="0" z="30"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="7.392438" lon="-133.084275" pitch="0" roll="0" transition="1" yaw="0" z="150"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="37.431551" lon="-150.286707" pitch="0" roll="0" transition="1" yaw="0" z="150"/>
   <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="37.431551" lon="-150.286707" pitch="0" roll="0" transition="1" yaw="0" z="60"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="37.431551" lon="-150.286707" pitch="0" roll="0" transition="1" yaw="0" z="150"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="53.859192" lon="-139.339705" pitch="0" roll="0" transition="1" yaw="0" z="150"/>
   <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="53.859192" lon="-139.339705" pitch="0" roll="0" transition="1" yaw="0" z="60"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="53.859192" lon="-139.339705" pitch="0" roll="0" transition="1" yaw="0" z="150"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="24.524120" lon="-175.621199" pitch="0" roll="0" transition="1" yaw="0" z="150"/>
   <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="24.524120" lon="-175.621199" pitch="0" roll="0" transition="1" yaw="0" z="60"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="24.524120" lon="-175.621199" pitch="0" roll="0" transition="1" yaw="0" z="150"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="-34.615385" lon="-121.824500" pitch="0" roll="0" transition="1" yaw="0" z="150"/>
   <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="-34.615385" lon="-121.824500" pitch="0" roll="0" transition="1" yaw="0" z="60"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="-34.615385" lon="-121.824500" pitch="0" roll="0" transition="1" yaw="0" z="150"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="-52.216428" lon="-83.353606" pitch="0" roll="0" transition="1" yaw="0" z="150"/>
   <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="-52.216428" lon="-83.353606" pitch="0" roll="0" transition="1" yaw="0" z="60"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="-52.216428" lon="-83.353606" pitch="0" roll="0" transition="1" yaw="0" z="150"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="-21.707953" lon="-42.693310" pitch="0" roll="0" transition="1" yaw="0" z="150"/>
   <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="-21.707953" lon="-42.693310" pitch="0" roll="0" transition="1" yaw="0" z="60"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="-21.707953" lon="-42.693310" pitch="0" roll="0" transition="1" yaw="0" z="150"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="-43.767927" lon="-22.363162" pitch="0" roll="0" transition="1" yaw="0" z="150"/>
   <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="-43.767927" lon="-22.363162" pitch="0" roll="0" transition="1" yaw="0" z="60"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="-43.767927" lon="-22.363162" pitch="0" roll="0" transition="1" yaw="0" z="150"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="-40.482399" lon="-2.971329" pitch="0" roll="0" transition="1" yaw="0" z="150"/>
   <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="-40.482399" lon="-2.971329" pitch="0" roll="0" transition="1" yaw="0" z="60"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="-40.482399" lon="-2.971329" pitch="0" roll="0" transition="1" yaw="0" z="150"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="-30.156454" lon="31.433536" pitch="0" roll="0" transition="1" yaw="0" z="150"/>
   <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="-30.156454" lon="31.433536" pitch="0" roll="0" transition="1" yaw="0" z="60"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="-30.156454" lon="31.433536" pitch="0" roll="0" transition="1" yaw="0" z="150"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="-33.207301" lon="63.649001" pitch="0" roll="0" transition="1" yaw="0" z="150"/>
   <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="-33.207301" lon="63.649001" pitch="0" roll="0" transition="1" yaw="0" z="60"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="-33.207301" lon="63.649001" pitch="0" roll="0" transition="1" yaw="0" z="150"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="-52.451108" lon="86.168549" pitch="0" roll="0" transition="1" yaw="0" z="150"/>
   <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="-52.451108" lon="86.168549" pitch="0" roll="0" transition="1" yaw="0" z="60"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="-52.451108" lon="86.168549" pitch="0" roll="0" transition="1" yaw="0" z="150"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="-31.095176" lon="113.379670" pitch="0" roll="0" transition="1" yaw="0" z="150"/>
   <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="-31.095176" lon="113.379670" pitch="0" roll="0" transition="1" yaw="0" z="60"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="-31.095176" lon="113.379670" pitch="0" roll="0" transition="1" yaw="0" z="150"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="-40.013038" lon="126.516073" pitch="0" roll="0" transition="1" yaw="0" z="150"/>
   <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="-40.013038" lon="126.516073" pitch="0" roll="0" transition="1" yaw="0" z="60"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="-40.013038" lon="126.516073" pitch="0" roll="0" transition="1" yaw="0" z="150"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="-28.279009" lon="131.207646" pitch="0" roll="0" transition="1" yaw="0" z="150"/>
   <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="-28.279009" lon="131.207646" pitch="0" roll="0" transition="1" yaw="0" z="60"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="-28.279009" lon="131.207646" pitch="0" roll="0" transition="1" yaw="0" z="150"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="-48.696219" lon="138.401390" pitch="0" roll="0" transition="1" yaw="0" z="150"/>
   <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="-48.696219" lon="138.401390" pitch="0" roll="0" transition="1" yaw="0" z="60"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="-48.696219" lon="138.401390" pitch="0" roll="0" transition="1" yaw="0" z="150"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="-37.431551" lon="158.731538" pitch="0" roll="0" transition="1" yaw="0" z="150"/>
   <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="-37.431551" lon="158.731538" pitch="0" roll="0" transition="1" yaw="0" z="60"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="-37.431551" lon="158.731538" pitch="0" roll="0" transition="1" yaw="0" z="150"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="-56.440678" lon="179.687228" pitch="0" roll="0" transition="1" yaw="0" z="150"/>
   <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="-56.440678" lon="179.687228" pitch="0" roll="0" transition="1" yaw="0" z="60"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="-56.440678" lon="179.687228" pitch="0" roll="0" transition="1" yaw="0" z="150"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="29.687093" lon="149.348393" pitch="0" roll="0" transition="1" yaw="0" z="150"/>
   <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="29.687093" lon="149.348393" pitch="0" roll="0" transition="1" yaw="0" z="60"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="29.687093" lon="149.348393" pitch="0" roll="0" transition="1" yaw="0" z="150"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="33.911343" lon="162.484796" pitch="0" roll="0" transition="1" yaw="0" z="150"/>
   <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="33.911343" lon="162.484796" pitch="0" roll="0" transition="1" yaw="0" z="60"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="33.911343" lon="162.484796" pitch="0" roll="0" transition="1" yaw="0" z="150"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="34.850065" lon="175.621199" pitch="0" roll="0" transition="1" yaw="0" z="150"/>
   <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="34.850065" lon="175.621199" pitch="0" roll="0" transition="1" yaw="0" z="60"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="34.850065" lon="175.621199" pitch="0" roll="0" transition="1" yaw="0" z="150"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="49.869622" lon="-26.429192" pitch="0" roll="0" transition="1" yaw="0" z="150"/>
   <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="49.869622" lon="-26.429192" pitch="0" roll="0" transition="1" yaw="0" z="60"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="49.869622" lon="-26.429192" pitch="0" roll="0" transition="1" yaw="0" z="150"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="31.329857" lon="-31.433536" pitch="0" roll="0" transition="1" yaw="0" z="150"/>
   <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="31.329857" lon="-31.433536" pitch="0" roll="0" transition="1" yaw="0" z="60"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="31.329857" lon="-31.433536" pitch="0" roll="0" transition="1" yaw="0" z="150"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="29.687093" lon="-40.503910" pitch="0" roll="0" transition="1" yaw="0" z="150"/>
   <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="29.687093" lon="-40.503910" pitch="0" roll="0" transition="1" yaw="0" z="60"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="29.687093" lon="-40.503910" pitch="0" roll="0" transition="1" yaw="0" z="150"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="28.983051" lon="-49.574283" pitch="0" roll="0" transition="1" yaw="0" z="150"/>
   <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="28.983051" lon="-49.574283" pitch="0" roll="0" transition="1" yaw="0" z="60"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="28.983051" lon="-49.574283" pitch="0" roll="0" transition="1" yaw="0" z="150"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="39.778357" lon="-43.944396" pitch="0" roll="0" transition="1" yaw="0" z="150"/>
   <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="39.778357" lon="-43.944396" pitch="0" roll="0" transition="1" yaw="0" z="60"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="39.778357" lon="-43.944396" pitch="0" roll="0" transition="1" yaw="0" z="150"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="33.207301" lon="-75.847089" pitch="0" roll="0" transition="1" yaw="0" z="150"/>
   <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="33.207301" lon="-75.847089" pitch="0" roll="0" transition="1" yaw="0" z="60"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="33.207301" lon="-75.847089" pitch="0" roll="0" transition="1" yaw="0" z="150"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="23.350717" lon="-95.238923" pitch="0" roll="0" transition="1" yaw="0" z="150"/>
   <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="23.350717" lon="-95.238923" pitch="0" roll="0" transition="1" yaw="0" z="30"/>
+  <SequenceKey advanceTimestep="0" isOrthographic="1" label="" lat="23.350717" lon="-95.238923" pitch="0" roll="0" transition="1" yaw="0" z="150"/>
 </CameraSequence>

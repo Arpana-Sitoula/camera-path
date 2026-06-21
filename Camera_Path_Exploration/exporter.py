@@ -2,17 +2,18 @@ import json
 import os
 
 
-Z_TC       = 30    # zoom for tropical cyclones (closer)
-Z_AR       = 60    # zoom for atmospheric rivers (further out)
-FRAME_TIME = 10    # time between keyframes in Met3D
-RUNTIME    = 10    # total runtime
+Z_TC       = 30     # zoom for tropical cyclones (closer)
+Z_AR       = 60     # zoom for atmospheric rivers (further out)
+Z_OVERVIEW = 150    # zoomed out between points
+FRAME_TIME = 10
+RUNTIME    = 10
 NAME       = "AutoSequence"
 
 
 def _z_for_type(point_type):
     if point_type == "TC":
         return Z_TC
-    return Z_AR  # AR_start, AR_center, AR_end all get wider zoom
+    return Z_AR
 
 
 def _make_sequence_key(lat, lon, z):
@@ -24,17 +25,14 @@ def _make_sequence_key(lat, lon, z):
 
 
 def export_to_xml(keyframes_json_path, output_dir):
-    """
-    Reads keyframes_2d.json and writes one XML file per timestep.
-    """
     with open(keyframes_json_path) as f:
         all_keyframes = json.load(f)
 
     os.makedirs(output_dir, exist_ok=True)
 
     for entry in all_keyframes:
-        timestep     = entry["timestep"]
-        camera_path  = entry["camera_path"]
+        timestep    = entry["timestep"]
+        camera_path = entry["camera_path"]
 
         lines = []
         lines.append('<!DOCTYPE CameraSequence>')
@@ -44,9 +42,18 @@ def export_to_xml(keyframes_json_path, output_dir):
         )
 
         for point in camera_path:
+            lat  = point["lat"]
+            lon  = point["lon"]
             z    = _z_for_type(point["type"])
-            line = _make_sequence_key(point["lat"], point["lon"], z)
-            lines.append(line)
+
+            # zoom out at this location before arriving
+            lines.append(_make_sequence_key(lat, lon, Z_OVERVIEW))
+
+            # zoom in to the point of interest
+            lines.append(_make_sequence_key(lat, lon, z))
+
+            # zoom back out before moving to next point
+            lines.append(_make_sequence_key(lat, lon, Z_OVERVIEW))
 
         lines.append('</CameraSequence>')
 
