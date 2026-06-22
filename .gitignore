@@ -1,5 +1,6 @@
 # Ignore data folder
 Feature_Detection/Data/tc_ar_data/
+.vscode/
 
 # Ignore results folder
 Feature_Detection/Results/
