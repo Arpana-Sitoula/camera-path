@@ -47,6 +47,7 @@ def extract_objects(mask: np.ndarray) -> List[List[Dict]]:
     """
     objects_per_time: List[List[Dict]] = []
     tdim = mask.shape[0]
+    print(tdim)
     for t in range(tdim):
         frame = mask[t].astype(np.bool_)
         if frame.sum() == 0:
@@ -179,23 +180,54 @@ def smooth_track(track: List[Tuple[float, float, int]], n_samples: int = 20) -> 
     return out
 
 
+def choose_focus_track(tracks: Dict[int, List[Tuple[float, float, int]]]) -> Tuple[int, List[Tuple[float, float, int]]]:
+    """Pick one representative object track to focus the camera on."""
+    if not tracks:
+        raise RuntimeError("No feature tracks found to build a camera path")
+
+    def track_score(item):
+        tid, seq = item
+        duration = seq[-1][2] - seq[0][2] if len(seq) > 1 else 0
+        return (len(seq), duration, -tid)
+
+    return max(tracks.items(), key=track_score)
+
+
 def generate_camera_keyframes(tracks: Dict[int, List[Tuple[float, float, int]]], feature_type: str = 'AR') -> Dict[int, List[Dict]]:
-    """For each track, produce camera keyframes (time_frac, lon, lat, zoom, tilt).
-    This prototype uses simple heuristics: AR -> wider zoom; TC -> tighter zoom.
-    """
+    """Produce a sequence for one feature: world view, then rotating close view."""
+    tid, seq = choose_focus_track(tracks)
+    sm = smooth_track(seq, n_samples=30)
+
     keyframes: Dict[int, List[Dict]] = {}
-    for tid, seq in tracks.items():
-        sm = smooth_track(seq, n_samples=30)
-        kf = []
-        for (tfrac, lon, lat) in sm:
-            if feature_type.upper() == 'AR':
-                zoom = 0.7  # smaller -> more zoomed out; prototype scale
-                tilt = 10.0
-            else:
-                zoom = 1.2
-                tilt = 5.0
-            kf.append({'t': tfrac, 'lon': lon, 'lat': lat, 'zoom': zoom, 'tilt': tilt})
-        keyframes[tid] = kf
+    kf = [{
+        't': -1.0,
+        'lon': 0.0,
+        'lat': 0.0,
+        'z': 250,
+        'pitch': 0.0,
+        'yaw': 0.0,
+        'roll': 0.0,
+    }]
+
+    if len(sm) == 1:
+        sm = [(0.0, sm[0][1], sm[0][2]), (1.0, sm[0][1], sm[0][2])]
+
+    for idx, (tfrac, lon, lat) in enumerate(sm):
+        # z around 30-50 gives a tighter close view once the camera focuses on the AR.
+        z = 50 - int(round(20 * tfrac))
+        pitch = 50.0
+        yaw = (idx * 18.0) % 360.0
+        kf.append({
+            't': tfrac,
+            'lon': lon,
+            'lat': lat,
+            'z': z,
+            'pitch': pitch,
+            'yaw': yaw,
+            'roll': 0.0,
+        })
+
+    keyframes[tid] = kf
     return keyframes
 
 
@@ -227,13 +259,10 @@ def write_met3d_xml(keyframes: Dict[int, List[Dict]], out_path: str,
         # map our fields to Met.3D attributes
         lon = rec['lon']
         lat = rec['lat']
-        # zoom -> z (heuristic mapping)
-        zoom = rec.get('zoom', 1.0)
-        if zoom <= 0:
-            zval = 30
-        else:
-            zval = int(max(5, min(1000, round(30 * (1.0 / zoom)))))
-        pitch = rec.get('tilt', 0.0)
+        zval = int(rec.get('z', 30))
+        pitch = rec.get('pitch', rec.get('tilt', 0.0))
+        yaw = rec.get('yaw', 0.0)
+        roll = rec.get('roll', 0.0)
         attrib = {
             'advanceTimestep': '0',
             'isOrthographic': '1',
@@ -241,12 +270,13 @@ def write_met3d_xml(keyframes: Dict[int, List[Dict]], out_path: str,
             'lat': f"{lat:.6f}",
             'lon': f"{lon:.6f}",
             'pitch': f"{pitch:.6f}",
-            'roll': '0',
+            'roll': f"{roll:.6f}",
             'transition': '1',
-            'yaw': '0',
+            'yaw': f"{yaw:.6f}",    
             'z': str(zval)
         }
         ET.SubElement(root, 'SequenceKey', attrib=attrib)
+        ET.indent(root, space="  ", level=0)
 
     tree = ET.ElementTree(root)
     tree.write(out_path, encoding='utf-8', xml_declaration=True)
@@ -275,6 +305,4 @@ if __name__ == '__main__':
     feat = sys.argv[3] if len(sys.argv) > 3 else 'AR'
     main(nc, out, feat)
 
-# To run paste command (python -m Feature_Detection.camera_generator 
-#      "C:\G\MASTERS\sem4\ResearchProjectMet3d\NAWDIC_CNN_Features\2026_01_20_Dublin\AR_TC_result.nc" 
-#      out_sequence.xml AR)
+# To run paste command (python -m camera_generator_v1 "C:\G\MASTERS\sem4\ResearchProjectMet3d\NAWDIC_CNN_Features\2026_01_20_Dublin\AR_TC_result.nc" out_sequence.xml AR)
