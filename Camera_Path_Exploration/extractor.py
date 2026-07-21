@@ -1,158 +1,155 @@
+import os
+import math
+
 import numpy as np
 import xarray as xr
 from scipy import ndimage
-from skimage.morphology import skeletonize
 
 
 # ── Config ────────────────────────────────────────────────────────────────────
-# smaller than this are treated as noise
-MIN_TC_PIXELS = 50    
-MIN_AR_PIXELS = 200   
 
-# ── Grid ──────────────────────────────────────────────────────────────────────
+MIN_TC_PIXELS = 50      # blobs smaller than this ignored as noise
+MIN_AR_PIXELS = 200     # same for AR
+MAX_SEARCH_KM = 4000    # max distance to match same feature across timesteps
 
 LONS = np.linspace(-180, 180, 1152)
 LATS = np.linspace(-90,   90,  768)
 
+
+
+# ── Coordinate Conversion ─────────────────────────────────────────────────────
+
 def pixel_to_lonlat(px, py):
+    """Convert pixel column/row to real-world lon/lat."""
     lon = float(LONS[int(np.clip(px, 0, 1151))])
     lat = float(LATS[int(np.clip(py, 0,  767))])
     return lon, lat
 
 
-# ── TC Extraction ─────────────────────────────────────────────────────────────
+# ── Distance ──────────────────────────────────────────────────────────────────
 
-def extract_tc_points(tc_mask):
-    """
-    Finds one keypoint per TC blob — the centroid.
-    Sorted largest → smallest 
-    """
-    binary         = (tc_mask > 0.5).astype(int)
+def haversine_km(lon1, lat1, lon2, lat2):
+    """Real geographic distance in km between two lon/lat points."""
+    lon1, lat1, lon2, lat2 = map(math.radians, [lon1, lat1, lon2, lat2])
+    dlon = lon2 - lon1
+    dlat = lat2 - lat1
+    a    = math.sin(dlat/2)**2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon/2)**2
+    return 6371 * 2 * math.asin(math.sqrt(a))
+
+
+# ── Blob Detection ────────────────────────────────────────────────────────────
+
+def find_blobs(mask, min_size):
+    binary         = (mask > 0.5).astype(int)
     labeled, count = ndimage.label(binary)
+    blobs          = []
 
-    points = []
     for blob_id in range(1, count + 1):
         blob = (labeled == blob_id)
         size = int(blob.sum())
 
-        if size < MIN_TC_PIXELS:
+        if size < min_size:
             continue
 
         cy, cx   = ndimage.center_of_mass(blob)
         lon, lat = pixel_to_lonlat(cx, cy)
-        points.append({"type": "TC", "lon": lon, "lat": lat, "size": size})
 
-    points.sort(key=lambda p: p["size"], reverse=True)
-    return points
+        blobs.append({"lon": lon, "lat": lat, "area": size})
+
+    return blobs
 
 
-# ── AR Extraction ─────────────────────────────────────────────────────────────
+def load_mask(nc_path, feature):
+    """Load a single TC or AR mask from a .nc file."""
+    ds   = xr.open_dataset(nc_path)
+    mask = np.array(ds[feature][0])
+    ds.close()
+    return mask
 
-def _spine_points_for_blob(blob_mask):
+
+# ── Tracking ──────────────────────────────────────────────────────────────────
+
+def match_blobs_to_tracks(blobs, prev_blobs, tracks):
     """
-    Extract exactly 3 points: start, center, end (west → east).
+    Match current timestep blobs to existing tracks using nearest neighbour.
+    Returns set of matched blob indices and updates tracks in place.
     """
-    spine  = skeletonize(blob_mask)
-    pixels = np.argwhere(spine)   # (row=y, col=x)
+    matched = set()
 
-    if len(pixels) < 3:
-        return []
+    for (tid, plon, plat) in prev_blobs:
+        best_idx  = None
+        best_dist = float("inf")
 
-    # order west → east along longitude axis
-    pixels = pixels[np.argsort(pixels[:, 1])]
+        for i, blob in enumerate(blobs):
+            if i in matched:
+                continue
+            d = haversine_km(plon, plat, blob["lon"], blob["lat"])
+            if d < best_dist:
+                best_dist = d
+                best_idx  = i
 
-    indices = [0, len(pixels) // 2, len(pixels) - 1]
-    labels  = ["AR_start", "AR_center", "AR_end"]
+        if best_idx is not None and best_dist <= MAX_SEARCH_KM:
+            matched.add(best_idx)
+            tracks[tid].append(blobs[best_idx])
 
-    points = []
-    for label, idx in zip(labels, indices):
-        py, px   = pixels[idx]
-        lon, lat = pixel_to_lonlat(px, py)
-        points.append({
-            "type":  label,
-            "lon":   lon,
-            "lat":   lat,
-            "size":  int(blob_mask.sum())
-        })
-
-    return points
+    return matched
 
 
-def extract_ar_points(ar_mask):
+def start_new_tracks(blobs, matched, tracks, next_id, timestep):
+    """Start a new track for every unmatched blob."""
+    for i, blob in enumerate(blobs):
+        if i not in matched:
+            tracks[next_id] = [{**blob, "timestep": timestep}]
+            next_id += 1
+    return next_id
+
+
+def get_active_blobs(tracks, timestep):
+    """Return (track_id, lon, lat) for all tracks active at this timestep."""
+    return [
+        (tid, seq[-1]["lon"], seq[-1]["lat"])
+        for tid, seq in tracks.items()
+        if seq and seq[-1]["timestep"] == timestep
+    ]
+
+
+# ── Public API ────────────────────────────────────────────────────────────────
+
+def track_features_across_time(nc_paths, feature="TC"):
     """
-    Finds each separate AR blob, extracts 3 spine points per blob
-    (start, center, end), and returns all of them as a flat list.
+    Track one feature type (TC or AR) across all timesteps.
+
+    For each timestep:
+      1. Find all blobs in the mask
+      2. Match blobs to existing tracks by proximity
+      3. Unmatched blobs start new tracks
+
+    Returns:
+        dict: track_id -> [{lon, lat, area, timestep}, ...]
     """
-    binary         = (ar_mask > 0.5).astype(bool)
-    labeled, count = ndimage.label(binary)
+    min_size   = MIN_TC_PIXELS if feature == "TC" else MIN_AR_PIXELS
+    tracks     = {}
+    next_id    = 1
+    prev_blobs = []
 
-    all_points = []
-    for blob_id in range(1, count + 1):
-        blob = (labeled == blob_id)
-        size = int(blob.sum())
+    for t, nc_path in enumerate(nc_paths):
 
-        if size < MIN_AR_PIXELS:
+        if not os.path.exists(nc_path):
+            print(f"  [timestep {t}] File not found, skipping.")
+            prev_blobs = []
             continue
 
-        points = _spine_points_for_blob(blob)
-        all_points.extend(points)
+        mask  = load_mask(nc_path, feature)
+        blobs = find_blobs(mask, min_size)
 
-    return all_points
+        # tag each blob with current timestep
+        for blob in blobs:
+            blob["timestep"] = t
 
+        matched = match_blobs_to_tracks(blobs, prev_blobs, tracks)
+        next_id = start_new_tracks(blobs, matched, tracks, next_id, t)
+        prev_blobs = get_active_blobs(tracks, t)
 
-# ── Nearest Neighbour Ordering ────────────────────────────────────────────────
+        print(f"  [timestep {t}] {feature} blobs: {len(blobs)}  active tracks: {len(prev_blobs)}")
 
-def _geo_distance(a, b):
-    """Simple flat distance in lon/lat degrees"""
-    return ((a["lon"] - b["lon"]) ** 2 + (a["lat"] - b["lat"]) ** 2) ** 0.5
-
-
-def order_by_proximity(points):
-    """
-    Greedy nearest neighbour ordering.
-    """
-    if len(points) <= 1:
-        return points
-
-    # start from the westernmost point (leftmost on map)
-    remaining = sorted(points, key=lambda p: p["lon"])
-    ordered   = [remaining.pop(0)]
-
-    while remaining:
-        current   = ordered[-1]
-        nearest   = min(remaining, key=lambda p: _geo_distance(current, p))
-        ordered.append(nearest)
-        remaining.remove(nearest)
-
-    return ordered
-
-# --Pipeline-----------------------------------------------------------------------------
-def extract_keyframes(nc_path):
-    """
-    Reads a .nc file and returns an ordered camera path as a list of
-    keyframe dicts, each with type, lon, and lat.
-    """
-    ds      = xr.open_dataset(nc_path)
-    tc_mask = np.array(ds["TC"][0])
-    ar_mask = np.array(ds["AR"][0])
-    ds.close()
-
-    tc_points = extract_tc_points(tc_mask)
-    ar_points = extract_ar_points(ar_mask)
-    all_points = tc_points + ar_points
-
-    if not all_points:
-        print("         No features detected.")
-        return []
-
-    ordered = order_by_proximity(all_points)
-
-    # print summary
-    tc_count = len(tc_points)
-    ar_count = len([p for p in ar_points if p["type"] == "AR_start"])
-    print(f"         TCs found : {tc_count}")
-    for p in tc_points:
-        print(f"           → lon={p['lon']:7.1f}  lat={p['lat']:6.1f}  size={p['size']} px")
-    print(f"         ARs found : {ar_count}  ({len(ar_points)} spine points total)")
-
-    return ordered
+    return tracks
