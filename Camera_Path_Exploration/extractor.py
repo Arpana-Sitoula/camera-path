@@ -115,7 +115,7 @@ def get_active_blobs(tracks, timestep):
 
 # ── Public API ────────────────────────────────────────────────────────────────
 
-def track_features_across_time(nc_paths, feature="TC"):
+def track_features_across_time(nc_paths, feature="TC", return_all_blobs=False):
     """
     Track one feature type (TC or AR) across all timesteps.
 
@@ -126,25 +126,31 @@ def track_features_across_time(nc_paths, feature="TC"):
 
     Returns:
         dict: track_id -> [{lon, lat, area, timestep}, ...]
+        (and, if return_all_blobs=True, also a second dict:
+         timestep -> [every blob detected at that timestep], needed later
+         for split/merge detection in ranking.py)
     """
     min_size   = MIN_TC_PIXELS if feature == "TC" else MIN_AR_PIXELS
     tracks     = {}
     next_id    = 1
     prev_blobs = []
+    all_blobs_by_timestep = {}
 
     for t, nc_path in enumerate(nc_paths):
 
         if not os.path.exists(nc_path):
             print(f"  [timestep {t}] File not found, skipping.")
             prev_blobs = []
+            all_blobs_by_timestep[t] = []
             continue
 
         mask  = load_mask(nc_path, feature)
         blobs = find_blobs(mask, min_size)
 
-        # tag each blob with current timestep
         for blob in blobs:
             blob["timestep"] = t
+
+        all_blobs_by_timestep[t] = blobs
 
         matched = match_blobs_to_tracks(blobs, prev_blobs, tracks)
         next_id = start_new_tracks(blobs, matched, tracks, next_id, t)
@@ -152,4 +158,6 @@ def track_features_across_time(nc_paths, feature="TC"):
 
         print(f"  [timestep {t}] {feature} blobs: {len(blobs)}  active tracks: {len(prev_blobs)}")
 
+    if return_all_blobs:
+        return tracks, all_blobs_by_timestep
     return tracks

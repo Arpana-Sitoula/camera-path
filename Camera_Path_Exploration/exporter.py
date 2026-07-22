@@ -86,21 +86,22 @@ def build_keyframe_lines(by_timestep):
 
 # ── Public API ────────────────────────────────────────────────────────────────
 
-def export_tracks_to_xml(tc_tracks, ar_tracks, output_dir):
+def export_single_track_xml(track_seq, z_value, output_path, frame_time=10, name="TopFeatureSequence"):
     """
-    Main function — writes one Met3D CameraSequence XML file
-    from TC and AR tracks across all timesteps.
+    Write a clean, single-feature CameraSequence XML — one SequenceKey per
+    timestep, always advancing, no jumping between unrelated features.
     """
-    os.makedirs(output_dir, exist_ok=True)
-
-    by_timestep = group_by_timestep(tc_tracks, ar_tracks)
-
-    lines  = build_header()
-    lines += build_keyframe_lines(by_timestep)
+    lines = [
+        '<!DOCTYPE CameraSequence>',
+        f'<CameraSequence frameTime="{frame_time}" loop="0" name="{name}" '
+        f'runtime="{frame_time * len(track_seq)}" tension="0">'
+    ]
+    for p in track_seq:
+        lines.append(
+            f'  <SequenceKey advanceTimestep="1" isOrthographic="1" label="" '
+            f'lat="{p["lat"]:.6f}" lon="{p["lon"]:.6f}" pitch="0" roll="0" '
+            f'transition="1" yaw="0" z="{z_value}"/>'
+        )
     lines.append('</CameraSequence>')
-
-    out_path = os.path.join(output_dir, "camera_sequence_tracked.xml")
-    with open(out_path, "w") as f:
+    with open(output_path, "w") as f:
         f.write("\n".join(lines))
-
-    print(f"XML saved → {out_path}")

@@ -1,0 +1,15 @@
+<!DOCTYPE CameraSequence>
+<CameraSequence frameTime="10" loop="0" name="TopFeatureSequence" runtime="120" tension="0">
+  <SequenceKey advanceTimestep="1" isOrthographic="1" label="" lat="-38.604954" lon="142.154648" pitch="0" roll="0" transition="1" yaw="0" z="60"/>
+  <SequenceKey advanceTimestep="1" isOrthographic="1" label="" lat="-40.717080" lon="158.731538" pitch="0" roll="0" transition="1" yaw="0" z="60"/>
+  <SequenceKey advanceTimestep="1" isOrthographic="1" label="" lat="-40.717080" lon="159.357081" pitch="0" roll="0" transition="1" yaw="0" z="60"/>
+  <SequenceKey advanceTimestep="1" isOrthographic="1" label="" lat="-40.482399" lon="159.669852" pitch="0" roll="0" transition="1" yaw="0" z="60"/>
+  <SequenceKey advanceTimestep="1" isOrthographic="1" label="" lat="-40.482399" lon="160.295395" pitch="0" roll="0" transition="1" yaw="0" z="60"/>
+  <SequenceKey advanceTimestep="1" isOrthographic="1" label="" lat="-40.013038" lon="160.295395" pitch="0" roll="0" transition="1" yaw="0" z="60"/>
+  <SequenceKey advanceTimestep="1" isOrthographic="1" label="" lat="-40.013038" lon="160.608167" pitch="0" roll="0" transition="1" yaw="0" z="60"/>
+  <SequenceKey advanceTimestep="1" isOrthographic="1" label="" lat="-39.778357" lon="160.920938" pitch="0" roll="0" transition="1" yaw="0" z="60"/>
+  <SequenceKey advanceTimestep="1" isOrthographic="1" label="" lat="-39.543677" lon="160.920938" pitch="0" roll="0" transition="1" yaw="0" z="60"/>
+  <SequenceKey advanceTimestep="1" isOrthographic="1" label="" lat="-41.421121" lon="165.925282" pitch="0" roll="0" transition="1" yaw="0" z="60"/>
+  <SequenceKey advanceTimestep="1" isOrthographic="1" label="" lat="-42.594524" lon="168.114683" pitch="0" roll="0" transition="1" yaw="0" z="60"/>
+  <SequenceKey advanceTimestep="1" isOrthographic="1" label="" lat="-43.533246" lon="169.678540" pitch="0" roll="0" transition="1" yaw="0" z="60"/>
+</CameraSequence>
