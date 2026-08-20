@@ -6,49 +6,46 @@ from extractor import haversine_km, MAX_SEARCH_KM
 
 def compute_track_metrics(seq):
     """
-    Calculate headline kinematic and morphological metrics for a single track.
+    Calculate metrics for camera motion mapping.
 
     Parameters:
-        seq (list[dict]): Time-ordered points for one track, each containing
-                          'lon', 'lat', 'area', 'timestep', and optionally 'time'.
+        seq (list[dict]): Time-ordered points for one track.
 
     Returns:
-        dict: lifetime, avg_speed_kmh, area_growth_rate, max_area, min_area
+        dict: lifetime, total_distance_traveled, max_extent_km, shape_volatility
     """
     lifetime = len(seq)
     if lifetime == 0:
         return {
             "lifetime": 0,
-            "avg_speed_kmh": 0.0,
-            "area_growth_rate": 0.0,
-            "max_area": 0,
-            "min_area": 0,
+            "total_distance_traveled": 0.0,
+            "max_extent_km": 0.0,
+            "shape_volatility": 0.0,
         }
 
-    speeds = []
+    total_distance = 0.0
+    area_changes = []
+    
     for a, b in zip(seq[:-1], seq[1:]):
         dist_km = haversine_km(a["lon"], a["lat"], b["lon"], b["lat"])
+        total_distance += dist_km
+        
+        # Absolute change in area (as a proxy for shape changes / grow & vanish)
+        area_changes.append(abs(b["area"] - a["area"]))
 
-        # Calculate time delta in hours
-        if "time" in a and "time" in b and a["time"] is not None and b["time"] is not None:
-            # numpy datetime64 delta to hours
-            dt_ns = (b["time"] - a["time"]).astype("timedelta64[ns]").astype(float)
-            dt_hours = max(dt_ns / (1e9 * 3600.0), 0.1)
-        else:
-            dt_hours = max(float(b["timestep"] - a["timestep"]), 1.0)
+    # Max extent is based on the extent_km we now extract
+    extents = [p.get("extent_km", 0.0) for p in seq]
+    max_extent_km = max(extents) if extents else 0.0
 
-        speeds.append(dist_km / dt_hours)
-
-    areas = [p["area"] for p in seq]
-    max_area = max(areas)
-    min_area = min(areas)
+    # Shape volatility combines area changes and will later add split/merge counts
+    # Using the mean absolute area change over the lifetime
+    avg_area_change = float(np.mean(area_changes)) if area_changes else 0.0
 
     return {
         "lifetime": lifetime,
-        "avg_speed_kmh": float(np.mean(speeds)) if speeds else 0.0,
-        "area_growth_rate": float((max_area - min_area) / lifetime) if lifetime else 0.0,
-        "max_area": max_area,
-        "min_area": min_area,
+        "total_distance_traveled": total_distance,
+        "max_extent_km": max_extent_km,
+        "shape_volatility": avg_area_change,  
     }
 
 
@@ -71,62 +68,78 @@ def count_split_merge_events(seq, all_blobs_by_timestep, radius_km=MAX_SEARCH_KM
 
 # ── Multi-Criteria Prioritization ─────────────────────────────────────────────
 
-def rank_tracks(tc_tracks, ar_tracks, tc_blobs, ar_blobs, weights=None, top_n=5):
+def rank_tracks(tc_tracks, ar_tracks, tc_blobs, ar_blobs, min_lifetime=3, top_n=5):
     """
-    Rank all extracted tracks based on literature-grounded life-cycle criteria.
-
-    Default Weights:
-        - speed: 0.35 (propagation speed)
-        - lifetime: 0.25 (durability of the phenomenon)
-        - split_merge: 0.25 (interaction ambiguity / topological complexity)
-        - area_growth: 0.15 (intensification / expansion rate)
+    Rank all extracted tracks based on distinct camera motion criteria using Z-scores.
+    
+    Criteria:
+        - total_distance_traveled -> Best for Follow Shots
+        - max_extent_km -> Best for Spline Shots
+        - shape_volatility -> Best for Spin Shots
+    
+    Tracks are assigned a primary camera motion based on which Z-score is highest.
 
     Returns:
         tuple[list[dict], list[dict]]: (all_ranked_tracks, top_n_tracks)
     """
-    if weights is None:
-        weights = {
-            "speed": 0.35,
-            "lifetime": 0.25,
-            "split_merge": 0.25,
-            "area_growth": 0.15,
-        }
-
     rows = []
     for tid, seq in tc_tracks.items():
         m = compute_track_metrics(seq)
-        m["split_merge"] = count_split_merge_events(seq, tc_blobs)
-        rows.append({"feature": "TC", "id": tid, "seq": seq, **m})
+        if m["lifetime"] >= min_lifetime:
+            # Combine avg area change with split_merge events for total volatility
+            sm_events = count_split_merge_events(seq, tc_blobs)
+            m["split_merge"] = sm_events
+            # Arbitrary weighting: add 500 "area change equivalent" per split/merge event
+            m["shape_volatility"] += sm_events * 500.0
+            
+            rows.append({"feature": "TC", "id": tid, "seq": seq, **m})
 
     for tid, seq in ar_tracks.items():
         m = compute_track_metrics(seq)
-        m["split_merge"] = count_split_merge_events(seq, ar_blobs)
-        rows.append({"feature": "AR", "id": tid, "seq": seq, **m})
+        if m["lifetime"] >= min_lifetime:
+            sm_events = count_split_merge_events(seq, ar_blobs)
+            m["split_merge"] = sm_events
+            m["shape_volatility"] += sm_events * 500.0
+            
+            rows.append({"feature": "AR", "id": tid, "seq": seq, **m})
 
     if not rows:
         return [], []
 
-    def normalize(key):
+    def get_z_scores(key):
         vals = [r[key] for r in rows]
-        lo, hi = min(vals), max(vals)
-        if hi == lo:
+        mean_val = np.mean(vals)
+        std_val = np.std(vals)
+        if std_val == 0:
             return {id(r): 0.0 for r in rows}
-        return {id(r): (r[key] - lo) / (hi - lo) for r in rows}
+        return {id(r): float((r[key] - mean_val) / std_val) for r in rows}
 
-    n_speed = normalize("avg_speed_kmh")
-    n_life = normalize("lifetime")
-    n_split = normalize("split_merge")
-    n_area = normalize("area_growth_rate")
+    z_distance = get_z_scores("total_distance_traveled")
+    z_extent = get_z_scores("max_extent_km")
+    z_volatility = get_z_scores("shape_volatility")
 
     for r in rows:
         rid = id(r)
-        r["score"] = float(
-            weights["speed"] * n_speed[rid] +
-            weights["lifetime"] * n_life[rid] +
-            weights["split_merge"] * n_split[rid] +
-            weights["area_growth"] * n_area[rid]
-        )
+        z_d = z_distance[rid]
+        z_e = z_extent[rid]
+        z_v = z_volatility[rid]
+        
+        r["z_distance"] = z_d
+        r["z_extent"] = z_e
+        r["z_volatility"] = z_v
+        
+        # Overall score is the maximum of its Z-scores (how exceptional is it in its best domain?)
+        best_z = max(z_d, z_e, z_v)
+        r["score"] = best_z
+        
+        if best_z == z_d:
+            r["camera_motion"] = "Follow"
+        elif best_z == z_e:
+            r["camera_motion"] = "Spline"
+        else:
+            r["camera_motion"] = "Spin"
 
+    # Sort globally by best Z-score
     rows.sort(key=lambda r: r["score"], reverse=True)
     for i, r in enumerate(rows):
         r["rank"] = i + 1

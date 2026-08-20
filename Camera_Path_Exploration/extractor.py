@@ -65,10 +65,23 @@ def find_blobs(mask, min_size, lons=None, lats=None, threshold=DEFAULT_THRESHOLD
         lon = float(lons[col_idx])
         lat = float(lats[row_idx])
 
+        # Calculate bounding box extent in km
+        row_indices, col_indices = np.where(blob)
+        min_row, max_row = row_indices.min(), row_indices.max()
+        min_col, max_col = col_indices.min(), col_indices.max()
+        
+        lon_min, lon_max = float(lons[min_col]), float(lons[max_col])
+        lat_min, lat_max = float(lats[min_row]), float(lats[max_row])
+        
+        diag1 = haversine_km(lon_min, lat_min, lon_max, lat_max)
+        diag2 = haversine_km(lon_min, lat_max, lon_max, lat_min)
+        extent_km = max(diag1, diag2)
+
         blobs.append({
             "lon": lon,
             "lat": lat,
             "area": size,
+            "extent_km": extent_km,
             "centroid_px": (float(cx), float(cy)),
         })
 
