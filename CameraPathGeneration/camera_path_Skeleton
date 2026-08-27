@@ -1,0 +1,198 @@
+import xarray as xr
+import numpy as np
+import xml.etree.ElementTree as ET
+import xml.dom.minidom
+import math
+from skimage.morphology import skeletonize
+import matplotlib.pyplot as plt
+
+# ==========================================
+# CONFIGURATION
+# ==========================================
+NC_FILE_PATH = r"C:\G\MASTERS\sem4\ResearchProjectMet3d\NAWDIC_CNN_Features\2026_01_28_Limerick\AR_TC_result.nc" # Defaulted to your path
+OUTPUT_XML = "camera_sequence_Limerick.xml"
+VARIABLE_NAME = "AR"
+
+# Region Bounding Boxes: (lat_min, lat_max, lon_min, lon_max)
+REGIONS = {
+    "North_Atlantic": (20, 70, -80, 0),
+    "Indian_Ocean": (-40, 30, 40, 100)
+}
+
+# ==========================================
+# HELPER FUNCTIONS
+# ==========================================
+def calculate_yaw(lat_cam, lon_cam, lat_target, lon_target):
+    """
+    Calculate camera yaw to look at a target. 
+    Added negative sign per your requirement for West-to-East viewing.
+    """
+    dy = lat_target - lat_cam
+    dx = lon_target - lon_cam
+    yaw = -math.degrees(math.atan2(dx, dy))
+    return yaw
+
+def extract_skeleton_path(ds, region_bounds, target_t, num_waypoints=5):
+    """
+    Extracts the skeleton of the AR at a specific target timestep, 
+    and returns N evenly spaced waypoints along the principal axis.
+    """
+    lat_min, lat_max, lon_min, lon_max = region_bounds
+    ds_region = ds.sel(lat=slice(lat_min, lat_max), lon=slice(lon_min, lon_max))
+    
+    # Extract binary frame at the EXACT current time of the simulation
+    current_frame = ds_region[VARIABLE_NAME].isel(time=target_t).values
+    skeleton = skeletonize(current_frame)
+    
+    lat_idx, lon_idx = np.where(skeleton)
+    
+    if len(lat_idx) < num_waypoints:
+        raise ValueError(f"AR skeleton too small in region {region_bounds} at timestep {target_t}")
+        
+    actual_lats = ds_region.lat.values[lat_idx]
+    actual_lons = ds_region.lon.values[lon_idx]
+    
+    # Sort coordinates by longitude (West to East)
+    sort_idx = np.argsort(actual_lons)
+    sorted_lats = actual_lats[sort_idx]
+    sorted_lons = actual_lons[sort_idx]
+    
+    indices = np.linspace(0, len(sorted_lats) - 1, num_waypoints).astype(int)
+    # wp_lats = sorted_lats[indices]
+    # wp_lons = sorted_lons[indices]
+    # # --- PLOTTING ---
+    # plt.figure(figsize=(12, 7))
+    
+    # # 1. Plot original AR mask (Blue)
+    # lons, lats = np.meshgrid(ds_region.lon.values, ds_region.lat.values)
+    # plt.pcolormesh(lons, lats, current_frame, cmap='Blues', alpha=0.5, shading='auto')
+    
+    # # 2. Plot Skeleton (Red)
+    # plt.scatter(actual_lons, actual_lats, color='red', s=10, label='1-Pixel Skeleton')
+    
+    # # 3. Plot chosen Waypoints (Yellow with black edge)
+    # plt.scatter(wp_lons, wp_lats, color='yellow', edgecolor='black', s=150, zorder=5, label='Camera Waypoints')
+    
+    # # Formatting
+    # plt.title(f"AR Skeletonization & Camera Path\n(Region: {region_bounds} | Timestep: {target_t})", fontsize=14)
+    # plt.xlabel("Longitude", fontsize=12)
+    # plt.ylabel("Latitude", fontsize=12)
+    # plt.legend(loc='lower right', fontsize=12)
+    # plt.grid(True, linestyle='--', alpha=0.6)
+    
+    # plt.tight_layout()
+    # plt.show()
+    return sorted_lats[indices], sorted_lons[indices]
+
+def create_sequence_key(parent, lon, lat, z, pitch, yaw, advance_time, transition="1"):
+    """Creates a single Met3D XML keyframe with default transition='1'."""
+    key = ET.SubElement(parent, "SequenceKey")
+    key.set("advanceTimestep", str(advance_time))
+    key.set("isOrthographic", "0")
+    key.set("label", "")
+    key.set("lat", str(lat))
+    key.set("lon", str(lon))
+    key.set("pitch", str(pitch))
+    key.set("yaw", str(yaw))
+    key.set("roll", "0")
+    key.set("transition", str(transition))
+    key.set("z", str(z))
+    return key
+
+# ==========================================
+# MAIN
+# ==========================================
+def generate_xml(ds):
+    root = ET.Element("CameraSequence")
+    root.set("name", "Skeleton")
+    
+    regions_list = list(REGIONS.items())
+    
+    # Keep track of the simulation's current timestamp!
+    current_t = 0 
+    
+    for reg_idx, (region_name, bounds) in enumerate(regions_list):
+        print(f"Processing region: {region_name} at simulation timestep: {current_t}...")
+        
+        try:
+            # Pass the current simulation time to the skeleton extractor
+            skel_lats, skel_lons = extract_skeleton_path(ds, bounds, target_t=current_t, num_waypoints=5)
+        except Exception as e:
+            print(f"Skipping {region_name}: {e}")
+            continue
+            
+        start_lat, start_lon = skel_lats[0], skel_lons[0]
+        mid_lat, mid_lon = skel_lats[2], skel_lons[2]
+        
+        # --- PHASE 1: INTRO & SPLINE (advanceTimestep="0", transition="1") ---
+        
+        # Frame 1: Top down global view
+        create_sequence_key(root, lon=mid_lon, lat=mid_lat-10, z=250, pitch=0, yaw=0, advance_time=0, transition="1")
+        
+        # Frames 2-4: Zoom in linearly toward the START of the skeleton (pitch = 3)
+        for i, z_level in enumerate(np.linspace(200, 50, 3)):
+            cam_lat = start_lat - 10
+            cam_lon = start_lon - 10
+            yaw = calculate_yaw(cam_lat, cam_lon, start_lat, start_lon)
+            create_sequence_key(root, lon=cam_lon, lat=cam_lat, z=z_level, pitch=3, yaw=yaw, advance_time=0, transition="1")
+            
+        # Frames 5-9: Fly through the skeleton's principal axis (pitch = 20)
+        for i in range(5):
+            target_lat = skel_lats[i]
+            target_lon = skel_lons[i]
+            
+            cam_lat = target_lat - 5
+            cam_lon = target_lon - 5
+            
+            if i < 4:
+                yaw = calculate_yaw(cam_lat, cam_lon, skel_lats[i+1], skel_lons[i+1])
+            else:
+                yaw = calculate_yaw(cam_lat, cam_lon, target_lat, target_lon)
+                
+            create_sequence_key(root, lon=cam_lon, lat=cam_lat, z=25, pitch=20, yaw=yaw, advance_time=0, transition="1")
+            
+        # Frames 10-12: Zoom out to Regional view (pitch = 3)
+        for i, z_level in enumerate(np.linspace(40, 70, 2)):
+            cam_lat = mid_lat - 15
+            cam_lon = mid_lon
+            yaw = calculate_yaw(cam_lat, cam_lon, mid_lat, mid_lon)
+            create_sequence_key(root, lon=cam_lon, lat=cam_lat, z=z_level, pitch=3, yaw=yaw, advance_time=0, transition="1")
+            
+            # Save final position. Explicitly set final Z to 100 to match the last linspace value.
+            final_lon, final_lat, final_pitch, final_yaw, final_transition = cam_lon, cam_lat, 3, yaw, 0
+
+        # --- PHASE 2: TIME EVOLUTION (advanceTimestep="1") ---
+        
+        # Frames 13-42: Camera frozen, time moves forward (30 frames)
+        for j in range(30):
+            # For the very last frame of the evolution, transition="1". Otherwise transition="0".
+            final_transition = "1" if j == 29 else "0"
+            create_sequence_key(root, 
+                                lon=final_lon, 
+                                lat=final_lat, 
+                                z=100, 
+                                pitch=final_pitch, 
+                                yaw=final_yaw, 
+                                advance_time=1,
+                                transition= final_transition)
+            current_t += 1
+
+        # Transition back to global view before moving to the next region (or ending)
+        create_sequence_key(root, 
+                            lon=0, 
+                            lat=0, 
+                            z=250, 
+                            pitch=0, 
+                            yaw=0, 
+                            advance_time=0,
+                            transition="1")    
+                            
+    # Write formatted XML
+    xml_str = xml.dom.minidom.parseString(ET.tostring(root)).toprettyxml(indent="    ")
+    with open(OUTPUT_XML, "w") as f:
+        f.write(xml_str)
+    print(f"\nSuccessfully generated {OUTPUT_XML}")
+
+if __name__ == "__main__":
+    ds = xr.open_dataset(r"C:\G\MASTERS\sem4\ResearchProjectMet3d\NAWDIC_CNN_Features\2026_01_28_Limerick\AR_TC_result.nc")
+    generate_xml(ds)

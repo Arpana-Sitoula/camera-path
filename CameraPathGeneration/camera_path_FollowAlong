@@ -1,0 +1,181 @@
+import xarray as xr
+import numpy as np
+import xml.etree.ElementTree as ET
+import xml.dom.minidom
+import math
+from scipy.ndimage import label
+from scipy.spatial.distance import cdist
+
+# ==========================================
+# CONFIGURATION
+# ==========================================
+NC_FILE_PATH = r"C:\G\MASTERS\sem4\ResearchProjectMet3d\NAWDIC_CNN_Features\2026_01_20_Dublin\AR_TC_result.nc"
+OUTPUT_XML = "met3d_follow_camera.xml"
+VARIABLE_NAME = "AR"
+
+# Max degrees an AR centroid can move in one timestep (3 hours) to be considered the same AR
+MAX_MOVEMENT_DEG = 10.0 
+
+# ==========================================
+# TRACKING ALGORITHM
+# ==========================================
+def track_longest_ar(ds):
+    """
+    Identifies discrete ARs, tracks them across time, and returns the 
+    trajectory (lats, lons, timesteps) of the one that traveled the furthest.
+    """
+    # Isolate Southern Hemisphere (Assuming lat goes from positive to negative, adjust slice if needed)
+    ds_sh = ds.sel(lat=slice(-90 , 0))
+    
+    tracks = {}         # Stores full history: { track_id: {'lats': [], 'lons': [], 'times': []} }
+    active_tracks = {}  # Currently alive ARs: { track_id: (current_lat, current_lon) }
+    next_track_id = 0
+    
+    print("Tracking ARs across all timesteps...")
+    
+    for t in range(ds_sh.sizes['time']):
+        frame = ds_sh[VARIABLE_NAME].isel(time=t).values
+        
+        # 1. Find discrete AR blobs in this frame
+        labeled_frame, num_features = label(frame)
+        current_centroids = []
+        
+        for i in range(1, num_features + 1):
+            lat_idx, lon_idx = np.where(labeled_frame == i)
+            if len(lat_idx) > 50: # Minimum size threshold to ignore noise
+                mean_lat = np.mean(ds_sh.lat.values[lat_idx])
+                mean_lon = np.mean(ds_sh.lon.values[lon_idx])
+                current_centroids.append((mean_lat, mean_lon))
+                
+        # 2. Match centroids to existing active tracks
+        new_active_tracks = {}
+        
+        if not current_centroids:
+            active_tracks = {}
+            continue
+            
+        if not active_tracks:
+            # Start new tracks for all found centroids
+            for c in current_centroids:
+                tracks[next_track_id] = {'lats': [c[0]], 'lons': [c[1]], 'times': [t]}
+                new_active_tracks[next_track_id] = c
+                next_track_id += 1
+        else:
+            # Calculate distance between all active tracks and new centroids
+            active_ids = list(active_tracks.keys())
+            active_coords = list(active_tracks.values())
+            
+            # Distance matrix: rows = active tracks, cols = new centroids
+            distances = cdist(active_coords, current_centroids)
+            
+            used_centroids = set()
+            
+            # Find closest valid match for each active track
+            for i, track_id in enumerate(active_ids):
+                closest_idx = np.argmin(distances[i])
+                min_dist = distances[i, closest_idx]
+                
+                if min_dist < MAX_MOVEMENT_DEG and closest_idx not in used_centroids:
+                    # Successfully tracked to next frame
+                    coord = current_centroids[closest_idx]
+                    tracks[track_id]['lats'].append(coord[0])
+                    tracks[track_id]['lons'].append(coord[1])
+                    tracks[track_id]['times'].append(t)
+                    new_active_tracks[track_id] = coord
+                    used_centroids.add(closest_idx)
+            
+            # Any centroids not matched become new tracks
+            for j, c in enumerate(current_centroids):
+                if j not in used_centroids:
+                    tracks[next_track_id] = {'lats': [c[0]], 'lons': [c[1]], 'times': [t]}
+                    new_active_tracks[next_track_id] = c
+                    next_track_id += 1
+                    
+        active_tracks = new_active_tracks
+
+    # 3. Calculate total distance for all valid tracks
+    longest_track_id = None
+    max_distance = 0
+    
+    for track_id, data in tracks.items():
+        if len(data['times']) > 3: # Must exist for at least a few frames
+            # Calculate cumulative Euclidean distance of the path
+            lats = np.array(data['lats'])
+            lons = np.array(data['lons'])
+            dist = np.sum(np.sqrt(np.diff(lats)**2 + np.diff(lons)**2))
+            
+            if dist > max_distance:
+                max_distance = dist
+                longest_track_id = track_id
+
+    if longest_track_id is None:
+        raise ValueError("No valid AR tracks found in the Southern Hemisphere.")
+        
+    print(f"Selected Track #{longest_track_id}: Traveled {max_distance:.2f} degrees over {len(tracks[longest_track_id]['times'])} timesteps.")
+    return tracks[longest_track_id]
+
+# ==========================================
+# XML GENERATOR
+# ==========================================
+def create_sequence_key(parent, lon, lat, z, pitch, yaw, advance_time, transition="1"):
+    key = ET.SubElement(parent, "SequenceKey")
+    key.set("advanceTimestep", str(advance_time))
+    key.set("isOrthographic", "0")
+    key.set("label", "")
+    key.set("lat", str(lat))
+    key.set("lon", str(lon))
+    key.set("pitch", str(pitch))
+    key.set("yaw", str(yaw))
+    key.set("roll", "0")
+    key.set("transition", str(transition))
+    key.set("z", str(z))
+    return key
+
+def generate_follow_xml(ds):
+    root = ET.Element("CameraSequence")
+    root.set("name", "FollowAR")
+    
+    # Get the trajectory of the furthest traveling AR
+    best_track = track_longest_ar(ds)
+    
+    t_start = best_track['times'][0]
+    start_lat = best_track['lats'][0]
+    start_lon = best_track['lons'][0]
+    
+    # --- PHASE 1: INTRO (Fast Forward to Birthplace) ---
+    # Top down global view at time 0
+    create_sequence_key(root, lon=0, lat=-45, z=250, pitch=0, yaw=0, advance_time=0, transition="1")
+    
+    # Advance time to the exact moment the AR is born, while zooming into its starting position
+    # (Note: If the AR starts at t=5, we need to advance time 5 times)
+    for i in range(t_start):
+        create_sequence_key(root, lon=start_lon, lat=start_lat, z=150, pitch=0, yaw=0, advance_time=1, transition="1")
+
+    # Zoom in to the starting centroid before it moves
+    create_sequence_key(root, lon=start_lon, lat=start_lat, z=80, pitch=0, yaw=0, advance_time=0, transition="1")
+
+    # --- PHASE 2: FOLLOW THE AR ---
+    # Loop through the remaining trajectory. The camera lat/lon updates alongside the time.
+    for i in range(len(best_track['times'])):
+        lat = best_track['lats'][i]
+        lon = best_track['lons'][i]
+        
+        # advance_time is 1 because we want the weather to animate as we move
+        # transition is 1 so the camera glides smoothly between centroids
+        create_sequence_key(root, lon=lon, lat=lat, z=80, pitch=0, yaw=0, advance_time=1, transition="1")
+        
+    # --- PHASE 3: OUTRO ---
+    # Zoom back out once it dissipates
+    final_lat = best_track['lats'][-1]
+    final_lon = best_track['lons'][-1]
+    create_sequence_key(root, lon=final_lon, lat=final_lat, z=250, pitch=0, yaw=0, advance_time=0, transition="1")
+
+    # Write formatted XML
+    xml_str = xml.dom.minidom.parseString(ET.tostring(root)).toprettyxml(indent="    ")
+    with open(OUTPUT_XML, "w") as f:
+        f.write(xml_str)
+    print(f"\nSuccessfully generated {OUTPUT_XML}")
+
+if __name__ == "__main__":
+    ds = xr.open_dataset(NC_FILE_PATH)
+    generate_follow_xml(ds)
