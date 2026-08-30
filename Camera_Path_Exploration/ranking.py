@@ -70,23 +70,33 @@ def calculate_temporal_metrics(seq: list[dict]) -> dict:
 def calculate_trajectory_distance(seq: list[dict]) -> dict:
     """
     Calculate trajectory travel distance ("Longest Path") along the storm's path.
-
-    Cumulative sum of Great-Circle Haversine distances between consecutive centroids:
-        total_distance = sum(haversine(point[t], point[t+1])) for t in range(len(seq)-1)
     """
     if len(seq) < 2:
-        return {"total_distance_km": 0.0, "avg_speed_km_per_step": 0.0}
+        return {
+            "total_distance_km": 0.0,
+            "net_distance_km": 0.0,
+            "directional_efficiency": 1.0,
+            "effective_distance_km": 0.0,
+            "avg_speed_km_per_step": 0.0,
+        }
 
     total_dist = 0.0
     for p_prev, p_curr in zip(seq[:-1], seq[1:]):
         dist = haversine_km(p_prev["lon"], p_prev["lat"], p_curr["lon"], p_curr["lat"])
         total_dist += dist
 
+    net_dist = haversine_km(seq[0]["lon"], seq[0]["lat"], seq[-1]["lon"], seq[-1]["lat"])
+    directional_efficiency = float(net_dist / max(1.0, total_dist))
+    effective_dist = float(total_dist * directional_efficiency)
+
     num_steps = len(seq) - 1
     avg_speed = total_dist / max(1, num_steps)
 
     return {
         "total_distance_km": total_dist,
+        "net_distance_km": net_dist,
+        "directional_efficiency": directional_efficiency,
+        "effective_distance_km": effective_dist,
         "avg_speed_km_per_step": avg_speed,
     }
 
@@ -183,6 +193,9 @@ def compute_track_metrics(seq: list[dict], all_blobs_by_timestep: dict = None) -
 
         # Trajectory Distance (Longest Path)
         "total_distance_traveled": dist["total_distance_km"],
+        "net_distance_traveled": dist["net_distance_km"],
+        "directional_efficiency": dist["directional_efficiency"],
+        "effective_distance": dist["effective_distance_km"],
         "avg_speed_km_per_step": dist["avg_speed_km_per_step"],
 
         # Area & Physical Extent (Big Area)
@@ -274,7 +287,7 @@ def rank_tracks(tc_tracks: dict,
         return [], []
 
     # 3. Compute Z-Scores across all candidate tracks for each dimension
-    distances = [r["total_distance_traveled"] for r in candidate_rows]
+    distances = [r["net_distance_traveled"] for r in candidate_rows]
     extents = [r["max_extent_km"] for r in candidate_rows]
     volatilities = [r["shape_volatility"] for r in candidate_rows]
 

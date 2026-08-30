@@ -90,15 +90,17 @@ def run_pipeline():
     print(f"            -> Evaluated {len(all_ranked)} valid tracks across 3 motion domains")
 
     # Display clean formatted summary table
-    print("\n" + "=" * 115)
-    print(f"{'Rank':<5} {'Feature':<8} {'Motion':<8} {'Lifetime':<10} {'Dist (km)':<14} {'Peak Area (px)':<16} {'Max Ext (km)':<14} {'Volatility':<14} {'Z-Score':<8}")
-    print("-" * 115)
+    print("\n" + "=" * 135)
+    print(f"{'Rank':<5} {'Feature':<8} {'Motion':<8} {'Lifetime':<10} {'Dist (km)':<12} {'Net Dist (km)':<14} {'Dir Eff':<10} {'Peak Area':<12} {'Max Ext (km)':<14} {'Volatility':<12} {'Z-Score':<8}")
+    print("-" * 135)
     for r in top_features:
         name = f"{r['feature']}-{r['id']}"
         print(f"#{r['rank']:<4} {name:<8} {r['camera_motion']:<8} "
-              f"{r['lifetime']:<10} {r['total_distance_traveled']:<14.1f} "
-              f"{r['max_area_px']:<16} {r['max_extent_km']:<14.1f} "
-              f"{r['shape_volatility']:<14.1f} {r['score']:<8.3f}")
+              f"{r['lifetime']:<10} {r['total_distance_traveled']:<12.1f} {r.get('net_distance_traveled', 0.0):<14.1f} "
+              f"{r.get('directional_efficiency', 1.0):<10.2f} "
+              f"{r['max_area_px']:<12} {r['max_extent_km']:<14.1f} "
+              f"{r['shape_volatility']:<12.1f} {r['score']:<8.3f}")
+    print("=" * 135 + "\n")
 
 
     # --------------------------------------------------------------------------

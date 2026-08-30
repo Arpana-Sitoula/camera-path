@@ -24,7 +24,7 @@ MIN_TC_PIXELS = 50       # Tropical Cyclones: smaller, concentrated vortex featu
 MIN_AR_PIXELS = 200      # Atmospheric Rivers: large, elongated plume structures
 
 # Maximum distance (in km) to link a blob in timestep (t) to a track from timestep (t-1):
-# Weather systems can travel at high speeds; 4000 km covers rapid movement across a 3h-6h window.
+# Weather systems can travel at high speeds; 1200 km covers rapid movement across a 3h-6h window.
 MAX_SEARCH_KM = 4000.0
 
 # Threshold for binarizing neural network probability masks (0.0 to 1.0):
@@ -144,13 +144,42 @@ def find_blobs(mask: np.ndarray, min_size: int,
 # 4. TEMPORAL TRACKING ENGINE
 # ==============================================================================
 
+def is_direction_compatible(track_seq: list[dict], candidate_blob: dict) -> bool:
+    """
+    Ensure the candidate blob does not sharply reverse the established direction of travel.
+    """
+    if not track_seq or len(track_seq) < 2:
+        return True
+
+    p_prev = track_seq[-1]
+    p_prev_prev = track_seq[-2]
+
+    # Calculate previous longitudinal delta with antimeridian wrapping
+    dlon_prev = (p_prev["lon"] - p_prev_prev["lon"] + 180.0) % 360.0 - 180.0
+    
+    # Calculate candidate longitudinal delta with antimeridian wrapping
+    dlon_cand = (candidate_blob["lon"] - p_prev["lon"] + 180.0) % 360.0 - 180.0
+    
+    dist_cand = haversine_km(p_prev["lon"], p_prev["lat"], candidate_blob["lon"], candidate_blob["lat"])
+
+    # If the track was moving East, reject sharp reverse jumps to the West
+    if dlon_prev > 0.5 and dlon_cand < -1.0 and dist_cand > 150.0:
+        return False
+
+    # If the track was moving West, reject sharp reverse jumps to the East
+    if dlon_prev < -0.5 and dlon_cand > 1.0 and dist_cand > 150.0:
+        return False
+
+    return True
+
+
 def match_blobs_to_tracks(current_blobs: list[dict],
                           prev_active_blobs: list[tuple],
                           tracks: dict,
                           max_distance_km: float = MAX_SEARCH_KM) -> set[int]:
     """
     Match blobs at current timestep (t) to active tracks from timestep (t-1)
-    using greedy nearest-neighbor matching based on Haversine distance.
+    using nearest-neighbor matching with Haversine distance and directional consistency.
 
     Parameters:
         current_blobs (list[dict]): Blobs detected at timestep t.
@@ -163,9 +192,14 @@ def match_blobs_to_tracks(current_blobs: list[dict],
     for (track_id, prev_lon, prev_lat) in prev_active_blobs:
         best_idx = None
         best_distance = float("inf")
+        track_seq = tracks.get(track_id, [])
 
         for idx, blob in enumerate(current_blobs):
             if idx in matched_indices:
+                continue
+
+            # Ensure candidate does not reverse track motion direction
+            if not is_direction_compatible(track_seq, blob):
                 continue
 
             dist = haversine_km(prev_lon, prev_lat, blob["lon"], blob["lat"])
