@@ -1,0 +1,142 @@
+%% ===========================================================
+%% Copernicus Publications LaTeX manuscript
+%% Requires copernicus.cls / copernicus.bst, available from
+%% https://publications.copernicus.org/for_authors/manuscript_preparation.html
+%% Replace "gmd" below with the abbreviation of the target journal.
+%% ===========================================================
+\documentclass[gmd, manuscript]{copernicus}
+
+\begin{document}
+
+\title{Automatic Camera Animation for Met.3D}
+
+%% --- authors -------------------------------------------------
+\Author[1]{}{Arpana}
+\Author[1]{}{Samarth}
+\Author[1]{Suraj}{Kumar}
+
+\affil[1]{Department of Applied Computer Science, Fulda University of
+Applied Sciences, Fulda, Germany}
+
+\correspondence{xyz (email@example.com)}
+
+\runningtitle{Automatic camera animation for Met.3D}
+\runningauthor{S. Kumar et al.}
+
+\received{}
+\pubdiscuss{}
+\revised{}
+\accepted{}
+\published{}
+
+\firstpage{1}
+
+\maketitle
+
+%% ===========================================================
+\begin{abstract}
+Three-dimensional visualisation of weather forecast data requires a
+camera path that shows the phenomena of interest clearly. Such paths are
+normally created by hand for each case. We present a method that
+generates camera animations automatically from detected and tracked
+atmospheric features, using atmospheric rivers as the target phenomenon.
+Given binary feature masks and per-timestep tracking records, the method
+extracts a guide curve for each feature. From this curve it builds a set
+of camera behaviours following the feature along its length, circling
+it, and visiting several features in turn and writes them out as
+camera sequences that run in the Met.3D visualisation framework.
+
+Two design decisions proved important. First, points along the guide
+curve must be ordered by walking the skeleton graph rather than by
+sorting them along a coordinate axis, which otherwise causes the path to
+double back on itself. Second, camera movement and forecast time must not
+change at once: the camera stays still while the forecast advances, and
+the forecast is held while the camera moves. We compare generated
+sequences against hand-authored ones and describe the camera conventions
+recovered from them.
+\end{abstract}
+
+%% ===========================================================
+\introduction
+%% ===========================================================
+
+Numerical weather prediction produces large, four-dimensional datasets
+that are difficult to inspect in their entirety. Three-dimensional
+visualisation offers one route to understanding them, showing structures
+such as fronts, cyclones and moisture transport in their spatial context
+rather than as a stack of two-dimensional maps. Tools such as Met.3D make
+this possible for interactive scientific work, and the same renderings
+are increasingly used for communication in teaching material, in
+public outreach, and in television weather broadcasts.
+
+Any three-dimensional animation, however, requires a camera path: a
+description of where the viewpoint sits at each moment, where it looks,
+and how it moves. The choice of path is not incidental. A path that stays
+too far away reveals little; one that moves too close loses geographic
+context; one that moves erratically is tiring to watch. In practice these
+paths are authored by hand, keyframe by keyframe, for each individual
+case. This is acceptable for a single figure or a one-off animation, but
+it does not scale to routine use, where forecasts are produced several
+times a day and the features worth showing differ from one run to the
+next.
+
+This suggests an alternative: if the features of interest have already
+been detected in the data, the camera path could be derived from them.
+Detection and tracking of atmospheric features is by now well
+established, and produces exactly the information a camera would need
+where a feature is, what shape it has, how large it is, and how it moves
+over time. The question is how to turn that information into camera
+motion that is both informative and pleasant to watch.
+
+We address this question for atmospheric rivers: long, narrow filaments
+of concentrated water vapour that transport a substantial fraction of the
+moisture reaching the mid-latitudes, and which are of direct forecasting
+interest because of their association with heavy precipitation at
+landfall. Their elongated geometry makes them a natural test case, since
+it admits an obvious camera behaviour following the feature along its
+length while their tendency to split, merge and deform over their
+lifetime makes that behaviour non-trivial to realise.
+
+The contribution of this work is a method for generating camera
+animations automatically from detected and tracked atmospheric-river
+features, together with an account of the design decisions that determine
+whether the resulting animations are usable. We describe how a guide
+curve is extracted from each feature, how several distinct camera
+behaviours are parameterised from that curve, and how camera motion is
+coordinated with the advance of forecast time. We also report the camera
+conventions of the target visualisation framework, which we recovered
+empirically from hand-authored sequences, since these proved to be the
+difference between paths that keep the feature in view and paths that do
+not.
+
+%% ===========================================================
+%% Further sections to be added:
+%%   \section{System overview}
+%%   \section{Methodology}
+%%   \section{Results}
+%%   \section{Discussion}
+%%   \conclusions
+%% ===========================================================
+
+%% ===========================================================
+%% Back matter (required by Copernicus)
+%% ===========================================================
+
+\codeavailability{} %% TODO
+
+\dataavailability{} %% TODO
+
+\authorcontribution{} %% TODO: e.g. feature tracking and ranking were
+%% developed by ...; skeleton extraction and camera animation by ...
+
+\competinginterests{The authors declare that they have no conflict of
+interest.}
+
+\begin{acknowledgements}
+%% TODO
+\end{acknowledgements}
+
+\bibliographystyle{copernicus}
+\bibliography{references.bib}
+
+\end{document}
