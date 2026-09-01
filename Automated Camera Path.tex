@@ -130,7 +130,9 @@ Leipziger Straße 123,
 
 
 \begin{abstract}
-Automated Camera Path Generation for Atmospheric River Visualization in Met3D
+
+Scientific visualization tools such as Met3D enable meteorologists to examine weather phenomena in three dimensions, but camera control remains largely manual. When multiple tropical cyclones (TCs) and atmospheric rivers (ARs) occur simultaneously, deciding which features to inspect and how the camera should move can be difficult. This work presents the meteorological analysis stage of an automated camera-planning system that converts the output of an existing neural detection pipeline into information for camera planning. Detected features are linked across forecast timesteps using nearest-centroid matching based on geodesic distance and characterized by their lifetime, travel distance, spatial extent, and shape volatility. Shape volatility captures changes in area as well as split and merge interactions. These measures are combined to rank the tracked features and assign one of three camera-motion types: follow, skeleton, or orbit. The resulting tracks and motion assignments are exported to a separate camera-trajectory generation module, which produces camera animations compatible with Met3D.
+
 \end{abstract}
 
 
@@ -150,6 +152,187 @@ TEXT
 
 \subsubsection{HEADING}
 TEXT
+
+\section{System Overview}
+
+The system consists of four stages arranged as a linear pipeline, with a hand-off from meteorological analysis to cinematographic rendering.
+
+\begin{enumerate}
+    \item \textbf{Detection}
+    NetCDF-format global forecast data from the German Weather Service is processed by the existing CGNet-based segmentation network (prior work, not part of this document), producing, for each of the 12 forecast timesteps, a probability field over the categories background, TC, and AR.
+
+    \item \textbf{Feature Extraction and Tracking}
+    Each timestep's probability field is thresholded and segmented independently into candidate features, which are then linked across consecutive timesteps into continuous tracks.
+
+    \item \textbf{Feature Ranking and Motion-Type Selection}
+    Each track is characterized along four dimensions and assigned a relevance score; the score profile determines which of three camera-motion archetypes---\textit{follow}, \textit{skeleton}, or \textit{orbit}---is selected.
+
+    \item \textbf{Camera Trajectory Generation and Rendering}  \textit{Please add content to this section.}
+    
+\end{enumerate}
+
+\section{Methodology}
+
+\subsection{Feature Extraction and Tracking}
+
+\textbf{Input representation.} The method operates on a sequence of NetCDF probability fields $P_t(x,y)$, one per forecast timestep $t \in \{1,\dots,12\}$, each giving the network's estimated likelihood that location $(x,y)$ belongs to the feature class of interest (TC or AR).
+
+\textbf{Thresholding.} Each probability field is converted to a binary candidate mask by thresholding at $\tau = 0.5$:
+\begin{equation}
+B_t(x,y) =
+\begin{cases}
+1, & P_t(x,y) \geq \tau \\
+0, & P_t(x,y) < \tau
+\end{cases}
+\tag{1}
+\end{equation}
+
+\textbf{Connected-component filtering.} Connected-component labelling is applied to $B_t$ to identify spatially contiguous candidate features. Components smaller than a class-specific minimum size are discarded to suppress noise and spurious single-pixel detections; the current implementation uses a minimum of 50 pixels for TC candidates and 200 pixels for AR candidates, reflecting the difference in typical physical scale between the two phenomena.
+
+\textbf{Spatial descriptors.} For each surviving component, a set of geographic descriptors is computed. For tropical cyclones, the descriptor of interest is the centroid, taken as the center of mass of the component's pixels:
+\begin{equation}
+\mathbf{c} = \frac{1}{n}\sum_{j=1}^{n}(x_j,y_j),
+\qquad
+(x_j,y_j) \in \Omega
+\tag{2}
+\end{equation}
+where $\Omega$ is the set of pixels belonging to the component. (The current implementation computes this directly in grid coordinates; a latitude-weighted variant, accounting for the shrinking physical area of grid cells toward the poles, is a straightforward refinement not yet applied.)
+
+For atmospheric rivers, no single point is representative, and the component is instead reduced to its skeleton --- a one-pixel-wide centerline obtained via a standard thinning/medial-axis skeletonization algorithm. The skeleton's two endpoints and its midpoint serve as the key waypoints characterizing the river's spatial extent, analogous to finding the backbone of a ribbon-shaped object.
+
+\textbf{Temporal tracking.} Each timestep's set of feature observations $F_t = \{f_1,\dots,f_n\}$ is associated with the observations at $t+1$ using nearest-neighbour matching on the great-circle (Haversine) distance between centroids. For two points at latitude/longitude $(\varphi_1,\lambda_1)$ and $(\varphi_2,\lambda_2)$, expressed in radians:
+\begin{equation}
+a =
+\sin^2\!\left(\frac{\Delta\varphi}{2}\right)
++
+\cos\varphi_1\cos\varphi_2
+\sin^2\!\left(\frac{\Delta\lambda}{2}\right),
+\qquad
+d =
+2R \cdot
+\operatorname{atan2}\!\left(\sqrt{a},\sqrt{1-a}\right)
+\tag{3}
+\end{equation}
+where $R \approx 6371\,\text{km}$ is the Earth's mean radius. A feature at time $t$ is linked to the closest feature at $t+1$ only if $d$ falls within a maximum matching radius, chosen to reflect plausible translation speeds for the phenomenon between consecutive forecast hours; associations exceeding this radius are rejected to avoid connecting spatially distant, unrelated detections. As discussed in Section 2.1, this static-radius nearest-neighbour approach is known to occasionally lose or prematurely terminate the tracks of unusually fast-moving cyclones [1], [2] --- a limitation the current implementation inherits and which velocity-extrapolated matching [2] could address in future revisions.
+
+The resulting associations form a trajectory for each feature $i$:
+\begin{equation}
+T_i = \{f_{i,t_1}, f_{i,t_2}, \dots, f_{i,t_k}\}
+\tag{4}
+\end{equation}
+representing the observed life cycle of that feature across the timesteps in which it was detected.
+
+
+\subsection{Feature Ranking}
+
+\textbf{Characterization.} Each completed trajectory $T_i$ is summarized along four metrics intended to capture how relevant the feature is likely to be for visualization.
+
+\textit{Lifetime} is the duration over which the feature could be continuously tracked:
+\begin{equation}
+L_i = t_k - t_1
+\tag{5}
+\end{equation}
+
+\textit{Total travel distance} is the cumulative geographic displacement of the feature's centroid over its tracked lifetime, computed as the sum of consecutive Haversine distances (Eq. 3):
+\begin{equation}
+D_i =
+\sum_{j=1}^{k-1}
+d\!\left(
+\mathbf{c}_{i,t_j},
+\mathbf{c}_{i,t_{j+1}}
+\right)
+\tag{6}
+\end{equation}
+
+\textit{Spatial extent} $E_i$ describes the geographic size of the feature, derived from the spatial dimensions (e.g., bounding-box diagonal or mask area) of the detected component, averaged or maximized over the track.
+
+\textit{Shape volatility} $V_i$ combines two complementary signals: how much the feature's area fluctuates frame-to-frame, and whether the feature is spatially close to another distinct detection --- a proxy for an impending or ongoing split/merge event, of exactly the kind that caused the fifteen IMILAST algorithms to diverge on storm Klaus (Section 2.1). For a track $T_i$ with area $a_{i,t_j}$ at each observed timestep, the average frame-to-frame area change is
+\begin{equation}
+\overline{\Delta A}_i =
+\frac{1}{k-1}
+\sum_{j=1}^{k-1}
+\left|
+a_{i,t_{j+1}} - a_{i,t_j}
+\right|
+\tag{7a}
+\end{equation}
+and the number of timesteps at which another distinct blob of the same feature class lies within a radius $r_{sm}$ is
+\begin{equation}
+n_i^{\mathrm{sm}} =
+\sum_{j=1}^{k}
+\mathbb{1}\!\left[
+\exists\, b \in
+\mathcal{B}_{t_j}\setminus\{f_{i,t_j}\} :
+0 < d(f_{i,t_j},b) \leq r_{sm}
+\right]
+\tag{7b}
+\end{equation}
+where $\mathcal{B}_{t_j}$ is the set of all features of the same class detected at timestep $t_j$, $d(\cdot,\cdot)$ is the Haversine distance (Eq. 3), and $\mathbb{1}[\cdot]$ is the indicator function. The two signals are combined with a weighting constant $w_{sm}$ that converts each interaction event into area-change-equivalent units:
+\begin{equation}
+V_i =
+\overline{\Delta A}_i + w_{sm}\,n_i^{\mathrm{sm}}
+\tag{7}
+\end{equation}
+
+\textbf{Normalization and scoring.} Because the four metrics have incompatible units and scales, each is standardized to a $z$-score across all tracked features in the dataset before combination:
+\begin{equation}
+Z_{X,i} =
+\frac{X_i-\mu_X}{\sigma_X},
+\qquad
+X \in \{L,D,E,V\}
+\tag{8}
+\end{equation}
+where $\mu_X$ and $\sigma_X$ are the mean and standard deviation of metric $X$ over all tracks. The normalized metrics are combined into a single visualization-relevance score via a weighted sum:
+\begin{equation}
+S_i =
+w_L Z_{L,i}
++
+w_D Z_{D,i}
++
+w_E Z_{E,i}
++
+w_V Z_{V,i}
+\tag{9}
+\end{equation}
+
+Tracks are ranked by $S_i$, and the highest-scoring features are selected for camera animation. The weights $w_L,w_D,w_E,w_V$ are treated as a visualization-oriented design choice rather than an objective measure of meteorological importance --- different weightings emphasize different kinds of ``interesting'' behaviour --- and their sensitivity is intended to be examined empirically (see Section 5, pending).
+
+\textbf{Camera-motion-type selection.} The same characterization that drives ranking also determines \textit{how} a selected feature should be presented. Three camera-motion archetypes are defined:
+
+\begin{table}[htbp]
+\centering
+\caption{Mapping from dominant feature characteristic to camera-motion archetype.}
+\label{tab:camera-motion}
+\begin{tabular}{lll}
+\hline
+\textbf{Dominant characteristic} &
+\textbf{Camera-motion type} &
+\textbf{Visualization objective} \\
+\hline
+High travel distance &
+Follow &
+Emphasize the feature's geographical movement \\
+
+Large spatial extent &
+Skeleton &
+Reveal the feature's spatial scale and structure \\
+
+High shape volatility &
+Orbit &
+Reveal changes in the feature's morphology \\
+\hline
+\end{tabular}
+\end{table}
+
+This mapping ties the camera's behaviour to a measurable property of the tracked phenomenon, rather than choosing a motion independently of the data: a fast-translating cyclone earns a chase-style follow shot; a continent-spanning atmospheric river earns a shot that traces its skeleton to convey scale; a rapidly reorganizing storm earns an orbit that lets the viewer see structural change from multiple angles.
+
+\textbf{Output interface.} For each selected feature, its trajectory (Eq. 4), the four characterization metrics (Eqs. 5--8), the composite score (Eq. 9), and the assigned motion type are serialized to an intermediate JSON file, along with supporting spatial information such as bounding boxes, needed by the camera-generation stage. This file is the sole interface to Section 4.3.
+
+
+\subsection{Camera Path Generation}
+
+\textit{Please add content to this section.}
+
 
 
 \conclusions  %% \conclusions[modified heading if necessary]
