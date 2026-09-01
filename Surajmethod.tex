@@ -1,0 +1,337 @@
+%% Copernicus Publications LaTeX template
+%% Requires copernicus.cls (download from https://publications.copernicus.org/for_authors/manuscript_preparation.html)
+\documentclass[journal abbreviation, manuscript]{copernicus}
+
+\begin{document}
+
+\title{Automatic camera-path generation for three-dimensional visualisation
+of atmospheric rivers}
+
+% \Author{firstname}{lastname}
+\Author[1]{Suraj}{Kumar}
+\Author[1]{}{}
+
+\affil[1]{Department of Applied Computer Science, Fulda University of
+Applied Sciences, Fulda, Germany}
+
+\correspondence{Suraj Kumar (email)}
+
+\runningtitle{Automatic camera paths for atmospheric rivers}
+\runningauthor{S. Kumar}
+
+\received{}
+\pubdiscuss{}
+\revised{}
+\accepted{}
+\published{}
+
+\firstpage{1}
+
+\maketitle
+
+%% ============================================================
+\section{Methodology}
+%% ============================================================
+
+\subsection*{Scope}
+
+This section describes the automatic camera-path generation component.
+Two inputs are taken as given: atmospheric-river (AR) detection, provided
+as binary feature masks by an existing detection model supplied by our
+supervisor, and feature tracking, which links detected features across
+forecast time steps and was developed by a project colleague. The work
+described here consumes those outputs and produces camera sequences that
+Met.3D can execute; camera-path design was carried out jointly with a
+second project member.
+
+\subsection{Problem formulation}
+
+Given a time-varying atmospheric field and a set of detected, tracked
+atmospheric-river features, the task is to synthesise a camera trajectory
+that presents those features intelligibly as a three-dimensional
+animation. A camera trajectory is expressed as an ordered sequence of
+keyframes, each specifying camera position in geographic coordinates
+(longitude, latitude), a zoom/altitude parameter $z$, orientation angles
+(pitch, yaw, roll), an interpolation flag, and a flag controlling whether
+the underlying forecast time step advances at that key. Met.3D
+interpolates between successive keys under a global tension parameter.
+
+The design problem is therefore not merely geometric. A trajectory must
+simultaneously (i) keep the feature of interest within frame, (ii)
+preserve geographic context so that a viewer can locate the phenomenon,
+(iii) remain smooth enough to be watchable, and (iv) coordinate camera
+motion with the temporal evolution of the data.
+
+\subsection{Data and pre-processing}
+
+Detection output is provided as a NetCDF dataset on a
+$1152 \times 768$ regular latitude--longitude grid with 61 forecast time
+steps at three-hourly resolution, spanning a 180\,h forecast window.
+Alongside the binary AR mask, the dataset provides total column water
+vapour (TQV), 850\,hPa wind components, and mean sea-level pressure.
+Tracking output is provided separately as a per-feature record
+containing, for each time step, the feature's centroid position, area,
+and physical extent, together with summary descriptors including
+lifetime, total distance travelled, shape volatility, and the number of
+split/merge events.
+
+A single global time step typically contains many spatially disjoint AR
+features. Individual features are therefore isolated by
+connected-component labelling before any path is derived, with a
+minimum-area threshold applied to reject noise.
+
+\subsection{Centreline extraction}
+\label{sec:centreline}
+
+For an elongated feature, a natural camera trajectory follows its long
+axis. Extracting that axis reliably required iterating over three
+approaches.
+
+\subsubsection{Morphological skeletonisation}
+
+The initial approach applies morphological thinning to the binary mask,
+reducing each feature to a single-pixel-wide centreline. This is
+computationally inexpensive and is an established descriptor for
+elongated atmospheric features. Two limitations emerged. First, skeletons
+of irregular real-world shapes develop spurious branches; second, the
+resulting centreline describes the geometric centre of the detected
+shape, which need not coincide with the physical core of moisture
+transport.
+
+\subsubsection{Branch pruning by longest path}
+
+To address branching, the skeleton is interpreted as an undirected graph
+over 8-connected pixels, and its longest path (graph diameter) is
+extracted by double breadth-first search. All pixels not on that path are
+discarded. A useful side effect is that this procedure returns the
+centreline already ordered end-to-end, which removes the need for a
+separate coordinate sort.
+
+This ordering property proved important. An earlier implementation
+ordered centreline points by sorting on longitude. For features that
+reverse direction in longitude, this interleaves points from different
+parts of the feature and produces a path that repeatedly doubles back.
+Walking the graph instead preserves true path order.
+
+\subsubsection{Field-ridge centreline}
+
+To address the geometric-versus-physical distinction, a third variant
+extracts the centreline from the continuous moisture field rather than
+the binary mask: sweeping across the feature's dominant axis, the cell of
+maximum TQV is selected at each step. The resulting polyline follows the
+ridge of moisture transport. This is a lightweight approximation of
+topological ridge extraction via Morse--Smale complexes; a full
+topological treatment was considered but not adopted, on the grounds that
+the additional tooling cost was not justified for a trajectory that only
+requires a smooth guide curve.
+
+In all variants the extracted centreline is finally fitted with a
+smoothing spline and resampled, yielding a continuous curve from which an
+arbitrary number of waypoints can be drawn.
+
+\subsection{Camera grammars}
+
+Rather than a single trajectory type, several parameterised camera
+behaviours (``grammars'') were implemented, each suited to a different
+feature configuration:
+
+\begin{itemize}
+  \item \textit{Along-feature traversal.} The camera advances along the
+        extracted centreline. Suited to strongly elongated features.
+  \item \textit{Orbit.} The camera circles a feature on a ring of fixed
+        angular radius, with orientation continuously directed inward.
+        Suited to compact or highly volatile features, where following an
+        erratic centroid would be visually unstable.
+  \item \textit{Multi-feature tour.} Significant features are visited in
+        sequence. Ordering by geographic longitude rather than by
+        magnitude was adopted after the latter produced long
+        intercontinental transits between consecutive targets.
+  \item \textit{Regional cut.} Features are filtered to a geographic
+        bounding box (for example the North Atlantic corridor) before a
+        tour is constructed.
+\end{itemize}
+
+\subsection{Camera conventions and calibration}
+\label{sec:conventions}
+
+Met.3D's camera sequencer is only lightly documented, so the semantics of
+the orientation parameters were established empirically by analysing
+hand-authored sequences produced through the application's own interface.
+Three findings materially changed the implementation.
+
+\paragraph{Position is the camera's own location, not the target's.}
+Hand-authored sequences contain latitude values outside the conventional
+$\pm 90^{\circ}$ range. This indicates that the position fields describe
+where the camera itself sits on its arc, which for oblique views lies
+well away from the observed feature. An early implementation placed the
+camera at the feature's own coordinates while raising pitch, which
+produced views directed away from the data.
+
+\paragraph{Angular offset should be bounded.}
+Working sequences displace the camera from its target by a small fixed
+angular distance, on the order of $5$--$15^{\circ}$. Scaling this offset
+proportionally with pitch, as initially attempted, produces displacements
+of comparable magnitude to the domain itself and moves the camera off the
+region of interest.
+
+\paragraph{Orientation is a bearing toward a target.}
+Yaw is computed as the bearing from the camera position to the point
+being observed, rather than from the direction of travel:
+%
+\begin{equation}
+  \psi = -\arctan\!2\bigl(\lambda_{\mathrm{t}} - \lambda_{\mathrm{c}},\;
+                          \phi_{\mathrm{t}} - \phi_{\mathrm{c}}\bigr),
+  \label{eq:yaw}
+\end{equation}
+%
+where $(\lambda_{\mathrm{c}}, \phi_{\mathrm{c}})$ is the camera position
+and $(\lambda_{\mathrm{t}}, \phi_{\mathrm{t}})$ the target, in longitude
+and latitude respectively. During traversal, the bearing is computed
+toward the following waypoint rather than the current one, so that the
+camera looks ahead along the feature. Yaw is additionally unwrapped
+between consecutive keys so that rotation through the
+$\pm 180^{\circ}$ discontinuity does not reverse direction.
+
+\subsection{Temporal coordination}
+
+Forecast time advances only on keys flagged for it. A key design
+decision, adopted after comparison with hand-authored sequences, is to
+separate camera motion from temporal motion: during segments in which the
+camera moves, the forecast is held static; during segments in which the
+forecast advances, the camera is held stationary. Sequences in which both
+changed simultaneously were markedly harder to interpret.
+
+Stationary segments are encoded as runs of identical keys with
+interpolation disabled, with interpolation re-enabled on the final key of
+the run to resume smooth motion. The number of such keys is budgeted
+against the dataset length so that the total number of advances does not
+exceed the available time steps.
+
+\subsection{Composite sequence structure}
+
+The resulting sequence template for a tracked feature is: a wide
+establishing view; a descending approach toward the feature's current
+position; a traversal or orbit of the feature; a withdrawal to an
+intermediate altitude; and a stationary segment during which the forecast
+advances and the feature evolves. For multi-cycle sequences this pattern
+repeats, with each cycle re-approaching the feature at its updated
+tracked position.
+
+Continuity between segments is maintained explicitly. The camera state at
+the end of each segment is retained and used as the initial state of the
+next, so that no segment begins from a reset position. Only the opening
+key originates from the global default view.
+
+\subsection{Post-processing}
+
+An optional smoothing stage operates on any generated sequence. Each
+parameter is fitted with a cubic spline across the existing keys and
+densely resampled, with angular parameters unwrapped before
+interpolation. Optionally, orientation is re-derived from a look-ahead
+point along the resampled path, which suppresses residual
+high-frequency variation in heading. This stage is applied when the
+underlying tracked centroid is itself volatile, trading a degree of
+positional fidelity for visual stability.
+
+%% ============================================================
+\section{Results}
+%% ============================================================
+
+The pipeline was exercised on the 61-time-step forecast dataset described
+above. Generated sequences load and execute in Met.3D, and produce
+rendered animations of the detected atmospheric-river field. This section
+reports the characteristics of generated sequences and the effect of the
+principal design decisions.
+
+\subsection{Quantitative characterisation of generated sequences}
+
+Table~\ref{tab:sequences} summarises measured properties of hand-authored
+reference sequences and of automatically generated output. Reported
+quantities are the number of keys; the number of sharp direction
+reversals (successive heading changes exceeding $150^{\circ}$), used as a
+proxy for visual instability; the observed ranges of the zoom and pitch
+parameters; and the number of keys advancing forecast time.
+
+\begin{table}[t]
+\caption{Measured properties of reference and generated camera
+sequences.}
+\label{tab:sequences}
+\begin{tabular}{lccccc}
+\tophline
+Sequence & Keys & Rev. & $z$ range & Pitch range & Adv.\ keys \\
+\middlehline
+Reference: along-feature   & 26  & 0 & 73--250 & 0--44  & 25 \\
+Reference: spline          & 84  & 1 & 16--250 & $-2$--66 & 64 \\
+Reference: spin (single)   & 22  & 2 & 16--250 & 0--71  & 15 \\
+Reference: spin+spline     & 64  & 1 & 25--250 & 0--52  & 0  \\
+Reference: schema exemplar & 111 & 8 & 30--150 & 0      & 0  \\
+Generated: multi-feature tour & 350 & 3 & 55--150 & 0   & 0  \\
+\bottomhline
+\end{tabular}
+\belowtable{}
+\end{table}
+
+Two observations follow. First, hand-authored sequences employ a
+substantially wider dynamic range in both zoom (16--250) and pitch (up to
+$71^{\circ}$) than early automatically generated output, which was
+confined to a conservative subset of the parameter space. Second,
+reference sequences achieve low reversal counts with comparatively few
+keys, indicating that Met.3D's own interpolation is responsible for much
+of the observed smoothness, and that dense key sampling is not by itself
+required.
+
+\subsection{Effect of centreline ordering}
+
+The ordering of centreline points was found to dominate trajectory
+quality. A generated multi-feature sequence of 350 keys exhibited 80
+sharp reversals when centreline points were ordered by longitude.
+Replacing this with graph-order traversal of the pruned skeleton,
+combined with ridge-based extraction, reduced the same measure to 3 --- a
+reduction of approximately 96\,\%. A controlled test on a synthetic
+U-shaped feature isolated the mechanism: longitude ordering produced 23
+reversals where graph ordering produced none.
+
+\subsection{Effect of camera-offset formulation}
+
+Sequences generated with pitch-proportional angular offset placed the
+camera at displacements exceeding $50^{\circ}$ from the observed feature,
+and rendered views in which the feature left the frame partway through
+the animation. Sequences generated with bounded offsets of
+$5$--$15^{\circ}$, matching the convention observed in reference
+material, retained the feature in frame throughout. Pitch magnitude alone
+was not the determining factor: reference sequences use pitch up to
+$71^{\circ}$ successfully when paired with appropriately bounded offsets.
+
+\subsection{Grammar selection against feature descriptors}
+
+Tracked features in the test dataset differ substantially in character,
+supporting the case for multiple camera grammars rather than a single
+trajectory type. The three highest-ranked tracked features each persisted
+for the full 61-step window but differed markedly otherwise: total
+distance travelled ranged from approximately 12\,400 to 27\,600\,km,
+maximum extent from approximately 4000 to 11\,100\,km, and the number of
+split/merge events from 11 to 59. The feature exhibiting 59 split/merge
+events is poorly suited to centreline traversal, since its centroid is
+unstable between consecutive time steps; an orbit about its mean position
+produces a stable view of the same evolution.
+
+
+%% ============================================================
+
+\codeavailability{} %% TODO
+
+\dataavailability{} %% TODO
+
+\authorcontribution{} %% TODO
+
+\competinginterests{The authors declare that they have no conflict of
+interest.}
+
+\begin{acknowledgements}
+%% TODO
+\end{acknowledgements}
+
+\bibliographystyle{copernicus}
+\bibliography{references.bib}
+
+\end{document}
