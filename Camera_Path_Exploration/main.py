@@ -17,7 +17,9 @@ from visualize_blob_evolution import export_animations
 # ==============================================================================
 # Path to input NetCDF dataset (single multi-timestep file or directory of per-timestep .nc files):
 DATASET_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "../Limerick/AR_TC_result.nc"))
-# DATASET_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "../Feature_Detection/Results/TC-AR-Met3d"))
+#DATASET_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "../Limrick/AR_TC_result.nc"))
+#DATASET_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "../Dublin/AR_TC_result.nc"))
+#DATASET_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "../Feature_Detection/Results/TC-AR-Met3d"))
 
 # Output directory for generated JSON camera paths and animated GIF visualizations:
 OUTPUT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "./Outputs"))
