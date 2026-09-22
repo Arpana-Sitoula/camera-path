@@ -9,6 +9,13 @@ This project is based on an existing neural network pipeline developed as part o
 The goal of this project is to extend that pipeline with automated camera path planning, so that Met3D can guide users through detected weather phenomena in both 2D and 3D.
 
 
-## Dependencies
+## Dependencies & Installation
 
-Python 3.10, PyTorch, xarray, numpy, scipy, scikit-image, cartopy, enstools, pygrib, cdo
+- **Python Version**: Python 3.10+
+- **Core Libraries**: PyTorch, xarray, numpy, scipy, scikit-image, Pillow, cartopy, enstools, metpy, pygrib, cdo, matplotlib, cmcrameri
+
+Install all Python dependencies with:
+
+```bash
+pip install -r requirements.txt
+```
