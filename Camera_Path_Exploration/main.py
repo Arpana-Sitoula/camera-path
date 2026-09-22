@@ -10,14 +10,14 @@ import numpy as np
 from extractor import track_single_file, track_directory
 from ranking import rank_tracks, DEFAULT_MIN_LIFETIME, DEFAULT_TOP_N
 from visualize_blob_evolution import export_animations
+from camera_path_generation import  generate_master_xml
 
 
 # ==============================================================================
 # CONFIGURATION PARAMETERS
 # ==============================================================================
 # Path to input NetCDF dataset (single multi-timestep file or directory of per-timestep .nc files):
-DATASET_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "../Limerick/AR_TC_result.nc"))
-# DATASET_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "../Feature_Detection/Results/TC-AR-Met3d"))
+DATASET_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "../Dublin/AR_TC_result.nc"))
 
 # Output directory for generated JSON camera paths and animated GIF visualizations:
 OUTPUT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "./Outputs"))
@@ -117,11 +117,22 @@ def run_pipeline():
     print(f"            -> Successfully exported {len(top_features)} top feature paths to:")
     print(f"               {json_out_file}")
 
+
     # --------------------------------------------------------------------------
-    # Stage 4: Generate Animated Visualizations
+    # Stage 4: Generate Met3D Camera Sequences
+    # --------------------------------------------------------------------------
+    print(f"Generating Met3D XML Camera Sequences...")
+    xml_dir = os.path.join(OUTPUT_DIR, "xml")
+    os.makedirs(xml_dir, exist_ok=True)
+    generate_master_xml(DATASET_PATH, json_out_file, xml_dir)
+
+    # --------------------------------------------------------------------------
+    # Stage 5: Generate Animated Visualizations
     # --------------------------------------------------------------------------
     print(f"Generating Animated Visualizations for Top Features...")
-    export_animations(DATASET_PATH, top_features, OUTPUT_DIR)
+    gif_dir = os.path.join(OUTPUT_DIR, "gif")
+    os.makedirs(xml_dir, exist_ok=True)
+    export_animations(DATASET_PATH, top_features, gif_dir)
 
 if __name__ == "__main__":
     run_pipeline()

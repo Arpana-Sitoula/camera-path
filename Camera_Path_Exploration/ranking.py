@@ -15,7 +15,7 @@ Core Concepts:
    - Peak Pixel Area (max_area_px): Maximum number of connected pixels across all timesteps.
    - Mean Pixel Area (mean_area_px): Average pixel area over the feature's lifetime.
    - Maximum Extent (max_extent_km): Largest bounding box diagonal diameter (km).
-     -> High extent/area = Ideal for wide "Spline" overview camera shots.
+     -> High extent/area = Ideal for wide "Skeleton" overview camera shots.
 
 3. Shape Volatility & Interactions:
    - Average Area Delta: Mean frame-to-frame change in pixel area (|area_{t+1} - area_t|).
@@ -246,7 +246,7 @@ def assign_camera_motion(z_distance: float, z_extent: float, z_volatility: float
     if dominant_score == z_distance:
         motion = "Follow"
     elif dominant_score == z_extent:
-        motion = "Spline"
+        motion = "Skeleton"
     else:
         motion = "Spin"
 
