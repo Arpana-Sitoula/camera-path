@@ -55,9 +55,9 @@ ORBIT_AT     = 0.0
 # HELPER FUNCTIONS: MATH & CAMERA
 # ==========================================
 def calculate_yaw(lat_cam, lon_cam, lat_target, lon_target):
-    """Calculates West-to-East camera yaw."""
+    """Calculates West-to-East camera yaw with antimeridian wrapping."""
     dy = lat_target - lat_cam
-    dx = lon_target - lon_cam
+    dx = (lon_target - lon_cam + 180.0) % 360.0 - 180.0
     return -math.degrees(math.atan2(dx, dy))
 
 def aim_distance(z, pitch):
@@ -101,9 +101,10 @@ def interpolate_aimed(root, start, end, n_steps, tgt_lat, tgt_lon, advance_time=
     yaw_prev = start[4]
     state = start
     last = n_steps - 1 if skip_last else n_steps
+    end_lon = unwrap(start[0], end[0])
     for i in range(1, last + 1):
         g = i / n_steps
-        lon   = start[0] + (end[0] - start[0]) * g
+        lon   = start[0] + (end_lon - start[0]) * g
         lat   = start[1] + (end[1] - start[1]) * g
         z     = start[2] + (end[2] - start[2]) * g
         pitch = start[3] + (end[3] - start[3]) * g
@@ -236,18 +237,20 @@ def build_follow_sequence(root, ar):
     
     insert_global_view(root)
     
-    cam_lat, cam_lon = start_lat - offset, start_lon - offset
+    cam_lat = start_lat - offset
+    cam_lon = start_lon - offset
     yaw = calculate_yaw(cam_lat, cam_lon, start_lat, start_lon)
     create_sequence_key(root, cam_lon, cam_lat, CAMERA_CONFIG["follow_z"], CAMERA_CONFIG["follow_pitch"], yaw, 0, "0")
     
     # Iterate dynamically with advancing time[cite: 3]
     for i in range(len(seq)):
         current_lat, current_lon = seq[i]['lat'], seq[i]['lon']
-        cam_lat, cam_lon = current_lat - offset, current_lon - offset
+        cam_lat = current_lat - offset
+        cam_lon = unwrap(cam_lon, current_lon - offset)
     
         if i < len(seq) - 1:
             next_lat, next_lon = seq[i+1]['lat'], seq[i+1]['lon']
-            yaw = calculate_yaw(cam_lat, cam_lon, next_lat, next_lon)
+            yaw = unwrap(yaw, calculate_yaw(cam_lat, cam_lon, next_lat, next_lon))
     
         create_sequence_key(root, cam_lon, cam_lat, CAMERA_CONFIG["follow_z"], CAMERA_CONFIG["follow_pitch"], yaw, 1, "1")
     
@@ -278,6 +281,7 @@ def build_spin_sequence(root, ar):
     for j in range(1, ORBIT_KEYS + 1):
         az = YAW_DIR * az_step * j
         o_lat, o_lon, o_yaw = camera_at(tgt_lat, tgt_lon, az, offset)
+        o_lon = unwrap(state[0], o_lon)
         yaw_prev = unwrap(yaw_prev, o_yaw)
         create_sequence_key(root, o_lon, o_lat, Z_ORBIT, PITCH_ORBIT, yaw_prev, 0, "1")
         state = (o_lon, o_lat, Z_ORBIT, PITCH_ORBIT, yaw_prev)

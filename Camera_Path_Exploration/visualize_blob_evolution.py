@@ -75,20 +75,31 @@ def export_animations(dataset_path: str, top_features: list[dict], output_dir: s
         )
         print(f"            -> Rendering Rank #{rank} ({feature_type}-{feature_id} | {camera_motion} Motion)...")
 
-        # Compute bounding map boundaries centered on the entire track with a buffer
-        all_lons = [p["lon"] for p in seq]
-        all_lats = [p["lat"] for p in seq]
-        min_lon = max(float(lons.min()), min(all_lons) - MAP_BUFFER_DEG)
-        max_lon = min(float(lons.max()), max(all_lons) + MAP_BUFFER_DEG)
+        # Check if the track crosses the antimeridian (+-180 deg)
+        all_lons_raw = [p["lon"] for p in seq]
+        all_lats_raw = [p["lat"] for p in seq]
+        crosses_180 = (max(all_lons_raw) - min(all_lons_raw) > 180.0) or (
+            any(l < -100 for l in all_lons_raw) and any(l > 100 for l in all_lons_raw)
+        )
+
+        all_lons = [(l + 360.0) % 360.0 if crosses_180 else l for l in all_lons_raw]
+        all_lats = all_lats_raw
+
+        lon_min_bound = 0.0 if crosses_180 else float(lons.min())
+        lon_max_bound = 360.0 if crosses_180 else float(lons.max())
+        min_lon = max(lon_min_bound, min(all_lons) - MAP_BUFFER_DEG)
+        max_lon = min(lon_max_bound, max(all_lons) + MAP_BUFFER_DEG)
         min_lat = max(float(lats.min()), min(all_lats) - MAP_BUFFER_DEG)
         max_lat = min(float(lats.max()), max(all_lats) + MAP_BUFFER_DEG)
+
+        render_extent = [0.0, 360.0, float(lats.min()), float(lats.max())] if crosses_180 else global_extent
 
         fig, ax = plt.subplots(figsize=FIGURE_SIZE)
 
         # Base 2D segmentation mask image
         im = ax.imshow(
             np.zeros((len(lats), len(lons))),
-            extent=global_extent,
+            extent=render_extent,
             origin="lower",
             cmap=FEATURE_CMAP,
             alpha=0.9,
@@ -102,7 +113,7 @@ def export_animations(dataset_path: str, top_features: list[dict], output_dir: s
 
         ax.set_xlim(min_lon, max_lon)
         ax.set_ylim(min_lat, max_lat)
-        ax.set_xlabel("Longitude (°)")
+        ax.set_xlabel("Longitude (°E)" if crosses_180 else "Longitude (°)")
         ax.set_ylabel("Latitude (°)")
         ax.legend(loc="lower right")
         ax.grid(True, linestyle="--", alpha=0.5)
@@ -133,11 +144,17 @@ def export_animations(dataset_path: str, top_features: list[dict], output_dir: s
             if is_directory:
                 cur_ds.close()
 
+            # Roll raster horizontally to [0, 360] if crossing the antimeridian
+            if crosses_180:
+                mask = np.roll(mask, shift=-(len(lons) // 2), axis=1)
+
             # Update raster mask
             im.set_data(mask)
 
             # Update trajectory path
-            c_lon, c_lat = point["lon"], point["lat"]
+            c_lon = (point["lon"] + 360.0) % 360.0 if crosses_180 else point["lon"]
+            c_lat = point["lat"]
+
             history_lons.append(c_lon)
             history_lats.append(c_lat)
 
